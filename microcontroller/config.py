@@ -32,22 +32,6 @@ MOTOR_RIGHT_ENA = 12     # GPIO12 (PWM0) → ENA  — controls speed via PWM
 MOTOR_RIGHT_ENB = 19     # GPIO19 (PWM1) → ENB  — controls speed via PWM
 
 
-# GPIO PINS — ENCODERS
-
-# Each motor has two encoder channels (A and B).
-# Yellow wire (A channel) and White wire (B channel).
-# Blue → 3V3, Green → GND (power wiring, not GPIO)
-
-ENCODER_MOTOR1_A = 4     # Motor 1 A → GPIO4
-ENCODER_MOTOR1_B = 7     # Motor 1 B → GPIO7
-ENCODER_MOTOR2_A = 8     # Motor 2 A → GPIO8
-ENCODER_MOTOR2_B = 9     # Motor 2 B → GPIO9
-ENCODER_MOTOR3_A = 10    # Motor 3 A → GPIO10
-ENCODER_MOTOR3_B = 11    # Motor 3 B → GPIO11
-ENCODER_MOTOR4_A = 24    # Motor 4 A → GPIO24
-ENCODER_MOTOR4_B = 25    # Motor 4 B → GPIO25
-
-
 # GPIO PINS — IMU (MPU6050)
 # Connects via I2C (SDA = data, SCL = clock)
 
@@ -88,7 +72,7 @@ GPS_TIMEOUT   = 1               # seconds to wait for a GPS reading before shutt
 
 # ROVER BEHAVIOR 
 
-ROVER_SPEED_MPH    = 1.0    # target speed               
+ROVER_SPEED_MPH    = 0.62    # target speed               
 ROVER_SPEED_FPS    = 1.467  # 1 mph × 1.467
 CAPTURE_EVERY_FT   = 2.0    # photo trigger distance      
 ROW_LENGTH_FT      = 75.0   # length of each crop row     
@@ -103,10 +87,8 @@ SCAN_SETTLE_TIME_SEC = 0.3
 # ENCODER / DISTANCE TRACKING
 # Used to convert encoder pulses into real distance traveled in feet.
 
-WHEEL_DIAMETER_IN = 8.0          # inches   
-WHEEL_DIAMETER_FT = 8.0 / 12.0  # feet     (converted for distance math)
-ENCODER_PPR       = 341.2        # pulses per revolution — confirm with motor team
-# Cytron 12V 37mm at 30:1 gear ratio is typically ~341 PPR????
+WHEEL_DIAMETER_IN = 4.45          # inches   
+WHEEL_DIAMETER_FT = 0.37  # feet     (converted for distance math)
 
 
 # BACKEND 
