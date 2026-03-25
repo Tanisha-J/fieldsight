@@ -2,106 +2,126 @@
 config.py - FieldSight Central Configuration
 
 This is the ONLY place where settings and pin numbers live.
-Every other file should be importting from here instead of hardcoding values.
-
-    If a pin number needs to change, change it HERE once.
+Every other file should be importing from here instead of hardcoding values.
+    If a setting needs to change, change it HERE once.
 
 Other files use this:
-    from config import MOTOR_LEFT_IN1, ROVER_SPEED, BACKEND_URL
+    from config import MOTOR_LEFT_IN1, CRUISE_PWM, BACKEND_URL
 """
 
-# GPIO PINS — LEFT MOTOR DRIVER (L298N U4)
-    # Controls Motor 1 and Motor 2 (left side of rover)
+# MOTOR PWM SPEED CONSTANTS
+# All values are duty cycle (0.0 = off, 1.0 = full speed).
+# Hardware supports 0.0–1.0 but we cap in software at MAX_PWM.
 
-MOTOR_LEFT_IN1 = 17      # GPIO17 → IN1
-MOTOR_LEFT_IN2 = 27      # GPIO27 → IN2
-MOTOR_LEFT_IN3 = 22      # GPIO22 → IN3
-MOTOR_LEFT_IN4 = 23      # GPIO23 → IN4
-MOTOR_LEFT_ENA = 18      # GPIO18 (PWM0) → ENA  — controls speed via PWM
-MOTOR_LEFT_ENB = 13      # GPIO13 (PWM1) → ENB  — controls speed via PWM
+# At 45% PWM on 30 RPM motors with 7" wheels:
+#   Speed = 0.28 mph 
+#   Current = 5–6A average draw across all 4 motors
+#   150 ft run = 6 minutes
 
+CRUISE_PWM      = 0.45   # normal straight-line driving
+TURN_INNER_PWM  = 0.25   # inside wheels during a turn
+TURN_OUTER_PWM  = 0.45   # outside wheels during a turn
+MAX_PWM         = 0.60   # hard upper limit
 
-# GPIO PINS — RIGHT MOTOR DRIVER (L298N U1)
-    # Controls Motor 3 and Motor 4 (right side of rover)
+# Soft-start ramp: instead of jumping to CRUISE_PWM instantly,
+# step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes.
+RAMP_STEP       = 0.05   # PWM increment per step
+RAMP_DELAY_SEC  = 0.10   # seconds between ramp steps
 
-MOTOR_RIGHT_IN1 = 5      # GPIO5  → IN1
-MOTOR_RIGHT_IN2 = 6      # GPIO6  → IN2
-MOTOR_RIGHT_IN3 = 16     # GPIO16 → IN3
-MOTOR_RIGHT_IN4 = 20     # GPIO20 → IN4
-MOTOR_RIGHT_ENA = 12     # GPIO12 (PWM0) → ENA  — controls speed via PWM
-MOTOR_RIGHT_ENB = 19     # GPIO19 (PWM1) → ENB  — controls speed via PWM
+# GPIO PINS — IMU 
+# Communicates over I2C 
+# Use smbus2: bus = smbus2.SMBus(1), then read registers via bus.read_byte_data()
 
-
-# GPIO PINS — IMU (MPU6050)
-# Connects via I2C (SDA = data, SCL = clock)
-
-IMU_SDA         = 2      # MPU SDA → GPIO2
-IMU_SCL         = 3      # MPU SCL → GPIO3
-IMU_VDD         = "3V3"  # MPU VDD → 3V3  
-IMU_I2C_ADDRESS = 0x68   # MPU6050 default I2C address 
+IMU_SDA         = 2      # GPIO2 → SDA (I2C data)
+IMU_SCL         = 3      # GPIO3 → SCL (I2C clock)
+IMU_I2C_ADDRESS = 0x68   # MPU6050 default I2C address (AD0 pin LOW)
+                         # If AD0 is pulled HIGH, address becomes 0x69
 
 
-# FAN
-# Cooling fan for Raspberry Pi — powered directly - always on when pi is powered
-    # Fan + → 5VE
-    # Fan - → GND
+# CAMERA
+# Both cameras connect via USB. 
+# run `ls /dev/video*` with both cameras plugged in to confirm.
 
+CAMERA_FRONT_INDEX  = 0      # USB index for front-facing camera
+CAMERA_SIDE_INDEX   = 1      # USB index for side-facing camera
+CAMERA_WIDTH        = 1280   # capture width in pixels  (720p)
+CAMERA_HEIGHT       = 720    # capture height in pixels (720p)
+CAMERA_FPS          = 30     # frames per second
+CAMERA_JPEG_QUALITY = 85     # JPEG compression quality 
+CAMERA_SAVE_DIR     = "captured_images"  # local folder on Pi before upload
 
-# CAMERA 
-# Both cameras connect via USB directly into the Pi 
-# *** Run `ls /dev/video*` on the Pi with both cameras plugged in to confirm indexes.
-
-CAMERA_LEFT_INDEX   = 0      # USB device index for left camera
-CAMERA_RIGHT_INDEX  = 2      # USB device index for right camera
-
-
-CAMERA_WIDTH        = 1280   # pixels — 720p width  
-CAMERA_HEIGHT       = 720    # pixels — 720p height 
-CAMERA_FPS          = 30     # frames per second    
-CAMERA_JPEG_QUALITY = 85     # compression quality  
-CAMERA_SAVE_DIR     = "captured_images"  # local folder to save images on pi before upload to cloud
 
 # GPS 
-# VK-162 USB GPS connects via USB directly into the Pi 
-# *** Run `ls /dev/ttyUSB*` on the Pi with GPS plugged in to confirm serial port.
+# Appears as a serial device, not a GPIO pin.
+# Run `ls /dev/ttyUSB*` to confirm port — will shift if other USB-serial
 
-GPS_PORT      = "/dev/ttyUSB0"  # serial port 
-GPS_BAUDRATE  = 9600            # standard baud rate for VK-162
-GPS_TIMEOUT   = 1               # seconds to wait for a GPS reading before shutting off and restarting
-
-
-# ROVER BEHAVIOR 
-
-ROVER_SPEED_MPH    = 0.62    # target speed               
-ROVER_SPEED_FPS    = 1.467  # 1 mph × 1.467
-CAPTURE_EVERY_FT   = 2.0    # photo trigger distance      
-ROW_LENGTH_FT      = 75.0   # length of each crop row     
-NUM_ROWS           = 2      # number of rows to survey    
-ROW_SPACING_FT     = 3.0    # space between rows          
-TURN_ANGLE_DEGREES = 90     # degrees to turn between rows
-
-# Small pause after stopping before capturing so image is not blurry
-SCAN_SETTLE_TIME_SEC = 0.3
+GPS_PORT        = "/dev/ttyUSB0"   # serial port
+GPS_BAUDRATE    = 9600             # VK-162 default baud rate
+GPS_TIMEOUT     = 1                # seconds before giving up on a read
 
 
-# ENCODER / DISTANCE TRACKING
-# Used to convert encoder pulses into real distance traveled in feet.
+# BATTERY & POWER 
+# Battery: 12V 10Ah LiFePO4
 
-WHEEL_DIAMETER_IN = 4.45          # inches   
-WHEEL_DIAMETER_FT = 0.37  # feet     (converted for distance math)
+BATTERY_VOLTAGE         = 12.0   # volts
+BATTERY_CAPACITY_AH     = 10.0   # rated Ah
+BATTERY_USABLE_AH       = 8.0    # around 80% of rated for LiFePO4
+MOTOR_AVG_CURRENT_A     = 5.5    # expected average draw at CRUISE_PWM (all 4 motors)
+MOTOR_PEAK_CURRENT_A    = 20.0   # expected peak during turns / acceleration
+MOTOR_STALL_CURRENT_A   = 30.0   # worst-case jam or something 
+# Estimated continuous runtime at cruise: BATTERY_USABLE_AH / MOTOR_AVG_CURRENT_A ≈ 1.45 hrs
 
+# ROVER BEHAVIOR
+ROVER_MAX_SPEED_MPH  = 0.62    # top speed at 100% PWM (30 RPM motors, 7" wheels)
+ROVER_CRUISE_MPH     = 0.28    # actual cruise speed at CRUISE_PWM (45%)
+ROVER_CRUISE_FPS     = 0.41    # feet per second at cruise (0.28 mph × 1.467)
 
-# BACKEND 
-# FastAPI backend runs on Oracle Cloud????
-# MQTT handles real time start/stop commands from the farmer dashboard.
+CAPTURE_EVERY_FT     = 2.0     # take a photo every N feet traveled
+ROW_LENGTH_FT        = 75.0    # length of each crop row to survey
+NUM_ROWS             = 2       # number of rows in the field
+ROW_SPACING_FT       = 3.0     # distance between row centers
+TURN_ANGLE_DEGREES   = 90      # heading change between rows
 
-BACKEND_URL     = ""  # fill in when backend ready
-MQTT_BROKER_URL = ""          # fill in when backend ready
-### MQTT_PORT       = ?????
-### MQTT_KEEPALIVE  = 60    # seconds between MQTT heartbeat pings ????
+SCAN_SETTLE_TIME_SEC = 0.3     # pause after stopping before capturing (reduces blur)
 
-# MQTT topic format — session_id gets filled in at runtime by backend_client.py
-MQTT_CMD_TOPIC    = "rover/{session_id}/cmd"     # backend → rover (start/stop)
-MQTT_STATUS_TOPIC = "rover/{session_id}/status"  # rover → backend (running/stopped)
-MQTT_SCAN_TOPIC   = "scans/new"                  # rover → backend (new scan data)
+# WHEEL GEOMETRY
+# Used for time-based distance estimation 
+# At CRUISE_PWM the rover covers ~25 ft/min → ~0.41 ft/sec.
+WHEEL_DIAMETER_IN = 7.0        # inches  (7" wheels confirmed in motor spec)
+WHEEL_DIAMETER_FT = 0.583      # feet    (7 / 12)
+WHEEL_CIRCUMFERENCE_FT = 1.833 # feet    (π × 0.583)
+
+# BACKEND — FastAPI on Oracle Cloud
+# Fill in BACKEND_URL and MQTT_BROKER_URL once deployed.
+# ─────────────────────────────────────────────
+BACKEND_URL     = ""           # e.g. "https://your-oracle-ip/api"
+MQTT_BROKER_URL = ""           # e.g. "your-oracle-ip"
+MQTT_PORT       = 1883         # standard unencrypted MQTT port
+                               # use 8883 if TLS is enabled on the broker
+MQTT_KEEPALIVE  = 60           # seconds between MQTT heartbeat pings
+
+# MQTT topics — {session_id} is replaced at runtime by backend_client.py
+MQTT_CMD_TOPIC        = "rover/{session_id}/cmd"        # backend → rover  (start / stop commands)
+MQTT_STATUS_TOPIC     = "rover/{session_id}/status"     # rover  → backend (running / stopped)
+MQTT_TELEMETRY_TOPIC  = "rover/{session_id}/telemetry"  # rover  → backend (battery, gps, heading, timestamp)
+MQTT_SCAN_TOPIC       = "scans/new"                     # rover  → backend (new scan result)
+
+# How often the rover publishes a telemetry update while running
+TELEMETRY_INTERVAL_SEC = 2.0   # seconds between telemetry publishes
+
+# ─────────────────────────────────────────────
+# BACKEND API ENDPOINTS
+# Rover calls these directly (HTTP POST) for image analysis.
+# Base URL comes from BACKEND_URL above.
+# ─────────────────────────────────────────────
+ENDPOINT_ANALYZE  = "/images/analyze"   # POST — sends image + GPS coords + session metadata
+                                        #        returns: is_diseased, severity, cause, etc.
+
+# ─────────────────────────────────────────────
+# FAN
+# Cooling fan is powered directly from 5V — always on when Pi is powered.
+# No GPIO control needed.
+#   Fan (+) → 5VE
+#   Fan (−) → GND
+# ─────────────────────────────────────────────
 
