@@ -12,8 +12,8 @@ Other files use this:
 # GPIO PINS — LEFT MOTOR DRIVER (L298N U4)
 # Controls Motor 1 (front-left) and Motor 2 (rear-left)
 
-MOTOR_LEFT_IN1 = 17      # GPIO17 → IN1  (Motor 1 direction)
-MOTOR_LEFT_IN2 = 27      # GPIO27 → IN2  (Motor 1 direction)
+MOTOR_LEFT_IN1 = 27      # GPIO17 → IN1  (Motor 1 direction)
+MOTOR_LEFT_IN2 = 17      # GPIO27 → IN2  (Motor 1 direction)
 MOTOR_LEFT_IN3 = 22      # GPIO22 → IN3  (Motor 2 direction)
 MOTOR_LEFT_IN4 = 23      # GPIO23 → IN4  (Motor 2 direction)
 MOTOR_LEFT_ENA = 18      # GPIO18 (PWM0) → ENA  (Motor 1 speed)
