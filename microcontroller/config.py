@@ -39,8 +39,8 @@ MOTOR_RIGHT_ENB = 19     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 #   150 ft run = 6 minutes
  
 CRUISE_PWM      = 0.45   # normal straight-line driving
-TURN_INNER_PWM  = 0.25   # inside wheels during a turn
-TURN_OUTER_PWM  = 0.45   # outside wheels during a turn
+TURN_INNER_PWM  = 0.10   # inside wheels during a turn
+TURN_OUTER_PWM  = 0.50   # outside wheels during a turn
 MAX_PWM         = 0.60   # hard upper limit
 
 # instead of jumping to CRUISE_PWM instantly, step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes
