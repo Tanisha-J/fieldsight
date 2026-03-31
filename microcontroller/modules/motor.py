@@ -70,6 +70,7 @@ TURN_SPEED = 50
 TURN_DURATION = 1.0
 
 
+
 class Motor:
     """
     Controls all four wheels of the FieldSight rover.
