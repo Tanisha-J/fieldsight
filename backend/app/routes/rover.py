@@ -5,7 +5,7 @@ from app. services.rover_service import start_rover, stop_rover
 
 router= APIRouter(prefix="/rover",tags= ["rover"])
 
-@rover .post("/start/{session_id}")
+@router.post("/start/{session_id}")
 def start (session_id: int, db: Session= Depends (get_db)):
     try:
         result= start_rover(db=db, session_id=session_id)
@@ -15,7 +15,7 @@ def start (session_id: int, db: Session= Depends (get_db)):
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Failed to start rover: {e}")
     
-@rover.post("/stop/{session_id}")
+@router.post("/stop/{session_id}")
 def stop (session_id: int, db: Session= Depends (get_db)):
     try:
         result= start_rover(db=db, session_id=session_id)
