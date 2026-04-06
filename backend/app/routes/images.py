@@ -2,8 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
-from app.services.image_analysis_service import analyze_image
-from app.services.oci_service import upload_to_oci
 
 
 router = APIRouter()
@@ -23,7 +21,7 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"All scans deleted for session {session_id}"}
 
-@router.post("/scans/upload")
+@router.post("/scan/upload")
 async def upload_scan(
     session_id: int = Form(...),
     farmer_id: int = Form(...),
@@ -36,10 +34,8 @@ async def upload_scan(
     #1. send to gemini
     result = await analyze_image(image_bytes)
     #2. if healthy/ no plant
-    if result["disease_status"] == "HEALTHY":
+    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
-    if result["confidence_score"<80]:
-        return {"staus" : "discarded", "reasoning" : "low confidence"}
     #3. upload to oci
     image_url, image_key = upload_to_oci(image_bytes, image.filename)
     #4. save to db
@@ -58,12 +54,4 @@ async def upload_scan(
     db.commit()
     db.refresh(scan)
     
-    return {
-        "status": "stored", 
-        "scan_id": scan.scan_id,
-        "disease_status": result["disease_status"],
-        "severity": result["severity"],
-        "confidence_score": result.get("confidence_score"),
-        "short_explanation": result.get("short_explanation")
-        }
-
+    return {"status": "stored", "scan_id": scan.scan_id}
