@@ -4,3 +4,6 @@ sqlalchemy
 pymysql
 cryptography
 python-dotenv
+paho-mqtt
+python-jose[cryptography]
+passlib[bcrypt]

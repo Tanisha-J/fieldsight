@@ -3,7 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import rover, images, health, telemetry
+from app.routes import rover, images, health, telemetry, auth
 
 app= FastAPI( title= "FieldSight API")
 
