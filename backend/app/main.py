@@ -1,14 +1,24 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import rover, images, health, telemetry
+from app.services.mqtt_service import start_mqtt_client
 
 app= FastAPI( title= "FieldSight API")
 
 
 #frontend (react) to talk to backend
+
+@asynxxontextmanager
+async def lifespan(app: FastAPI):
+    start_mqtt_client()
+    yield
+app= FastAPI(title = "FieldSight API", lifespan= lifespan)
+
+
 
 app.add_middleware(
     CORSMiddleware,
