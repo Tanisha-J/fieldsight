@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Enum, TIMESTAMP, Double, Boolean, ForeignKey, DATE, Index
+from sqlalchemy import Column, Integer, BigInteger, String, Enum, TIMESTAMP, Double, Boolean, ForeignKey, DATE, Index, JSON
 from sqlalchemy.sql import func
 from app.db import Base
 
@@ -38,7 +38,7 @@ class Scan(Base):
     disease_status = Column(Enum("DISEASED", "HEALTHY"), nullable=False)
     image_url = Column(String(255), nullable=False)
     image_key = Column(String(255), nullable=False)
-    severity = Column(Integer, nullable=True)
+    severity = Column(Enum("YELLOW", "RED", "ORANGE"), nullable=False)
     gemini_status = Column(String(20), nullable=True)
     scanned_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
     gps_lat = Column(Double, nullable=False)
