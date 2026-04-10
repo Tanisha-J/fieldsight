@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
 from app.db import SessionLocal
+from app.services.telemery_service import store_telemetry
+
+
+from app.db import SessionLocal
+
 from app.services.telemetry_service import store_telemetry
 
 # getting host from environment variables 
