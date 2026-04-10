@@ -37,14 +37,13 @@ async def upload_scan(
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
     #3. upload to oci
-    image_url, image_key = upload_to_oci(image_bytes, image.filename)
+    image_key = upload_to_oci(image_bytes, image.filename)
     #4. save to db
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
-        image_url=image_url,
         image_key=image_key,
         gemini_status="completed",
         gps_lat=gps_lat,
