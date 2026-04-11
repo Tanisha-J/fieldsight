@@ -4,3 +4,4 @@ sqlalchemy
 pymysql
 cryptography
 python-dotenv
+oci
