@@ -135,33 +135,33 @@ def test_device_scan():
         pass
 
     # Check config indexes exist as devices
-    front_device = f"/dev/video{config.CAMERA_FRONT_INDEX}"
-    side_device  = f"/dev/video{config.CAMERA_SIDE_INDEX}"
+    left_device = f"/dev/video{config.CAMERA_LEFT_INDEX}"
+    right_device  = f"/dev/video{config.CAMERA_RIGHT_INDEX}"
 
-    front_exists = os.path.exists(front_device)
-    side_exists  = os.path.exists(side_device)
+    left_exists = os.path.exists(left_device)
+    right_exists  = os.path.exists(right_device)
 
     result(
-        f"Front camera device exists ({front_device})",
-        front_exists
+        f"Left camera device exists ({left_device})",
+        left_exists
     )
     result(
-        f"Side camera device exists ({side_device})",
-        side_exists
+        f"Right camera device exists ({right_device})",
+        right_exists
     )
 
-    if not front_exists or not side_exists:
+    if not left_exists or not right_exists:
         print(f"""
   [FIX] Expected devices not found.
   Current config:
-      CAMERA_FRONT_INDEX = {config.CAMERA_FRONT_INDEX}  → looks for /dev/video{config.CAMERA_FRONT_INDEX}
-      CAMERA_SIDE_INDEX  = {config.CAMERA_SIDE_INDEX}  → looks for /dev/video{config.CAMERA_SIDE_INDEX}
+      CAMERA_LEFT_INDEX = {config.CAMERA_LEFT_INDEX}  → looks for /dev/video{config.CAMERA_LEFT_INDEX}
+      CAMERA_RIGHT_INDEX  = {config.CAMERA_RIGHT_INDEX}  → looks for /dev/video{config.CAMERA_RIGHT_INDEX}
 
   Update these values in config.py to match what you see above.
         """)
         return False
 
-    return front_exists and side_exists
+    return left_exists and right_exists
 
 
 # ─────────────────────────────────────────────
@@ -181,8 +181,8 @@ def test_opencv_open():
     passed = True
 
     for label, index in [
-        ("Front camera", config.CAMERA_FRONT_INDEX),
-        ("Side camera",  config.CAMERA_SIDE_INDEX)
+        ("Left camera", config.CAMERA_LEFT_INDEX),
+        ("Right camera",  config.CAMERA_RIGHT_INDEX)
     ]:
         print(f"\n  Testing {label} (index {index})...")
 
@@ -253,8 +253,8 @@ def test_single_capture():
     passed = True
 
     for label, index in [
-        ("front", config.CAMERA_FRONT_INDEX),
-        ("side",  config.CAMERA_SIDE_INDEX)
+        ("left", config.CAMERA_LEFT_INDEX),
+        ("right",  config.CAMERA_RIGHT_INDEX)
     ]:
         cam = cv2.VideoCapture(index)
 
@@ -337,8 +337,8 @@ def test_both_capture():
     passed = True
 
     for label, index in [
-        ("front", config.CAMERA_FRONT_INDEX),
-        ("side",  config.CAMERA_SIDE_INDEX)
+        ("left", config.CAMERA_LEFT_INDEX),
+        ("right",  config.CAMERA_RIGHT_INDEX)
     ]:
         cam = cv2.VideoCapture(index)
 
@@ -417,11 +417,11 @@ def test_module_import():
         return False
 
     try:
-        front_path, side_path = camera.capture_both()
+        left_path, right_path = camera.capture_both()
         result(
             "CameraController.capture_both()",
             True,
-            f"front={front_path}  side={side_path}"
+            f"left={left_path}  right={right_path}"
         )
     except Exception as e:
         result("CameraController.capture_both()", False, str(e))
