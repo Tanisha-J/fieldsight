@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
-from services.oci_service import upload_to_oci
-from services.image_analysis_service import analyze_image
+from app.services.oci_service import upload_to_oci
+from app.services.image_analysis_service import analyze_image
 
 router = APIRouter()
 @router.get ("/scans/{session_id}")
