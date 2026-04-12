@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
 from app.services.oci_service import upload_to_oci
+from app.services.oci_service import delete_from_oci
 from app.services.image_analysis_service import analyze_image
 
 router = APIRouter()
+
 @router.get ("/scans/{session_id}")
 def get_scans (session_id: int ,db: Session = Depends (get_db)):
     scans=db.query(Scan).filter(Scan.session_id== session_id).all()
@@ -18,6 +20,11 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
     scans = db.query(Scan).filter(Scan.session_id == session_id).all()
     if not scans:
         raise HTTPException(status_code=404, detail="No scans found for this session")
+    
+    for scan in scans:
+        if scan.image_key:
+            delete_from_oci(scan.image_key)
+            
     db.query(Scan).filter(Scan.session_id == session_id).delete()
     db.commit()
     return {"message": f"All scans deleted for session {session_id}"}
@@ -69,7 +76,9 @@ async def upload_scan(
     result = await analyze_image(image_bytes)
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
+    
     image_url, image_key = upload_to_oci(image_bytes, image.filename)
+    
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
@@ -85,4 +94,4 @@ async def upload_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
-    return {"status": "stored", "scan_id": scan.scan_id}
+    return {"status": "stored", "scan_id": scan.scan_id, "image_url": image_url}

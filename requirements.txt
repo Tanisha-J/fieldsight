@@ -6,3 +6,5 @@ cryptography
 python-dotenv
 oci
 paho-mqtt
+google-generativeai
+python-multipart
