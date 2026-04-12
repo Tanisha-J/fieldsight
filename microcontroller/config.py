@@ -65,8 +65,8 @@ IMU_I2C_ADDRESS = 0x68   # MPU6050 default I2C address (AD0 pin LOW)
 CAMERA_LEFT_INDEX   = 0      # USB index for left-facing camera
 CAMERA_RIGHT_INDEX  = 2      # USB index for right-facing camera
                               # recheck with `v4l2-ctl --list-devices` on Pi
-CAMERA_WIDTH        = 640   # capture width in pixels  (720p)
-CAMERA_HEIGHT       = 480    # capture height in pixels (720p)
+CAMERA_WIDTH        = 1280   # capture width in pixels  (720p)
+CAMERA_HEIGHT       = 720    # capture height in pixels (720p)
 CAMERA_FPS          = 30     # frames per second
 CAMERA_JPEG_QUALITY = 85     # JPEG compression quality (0–100)
 CAMERA_SAVE_DIR     = "captured_images"  # local folder on Pi before upload
