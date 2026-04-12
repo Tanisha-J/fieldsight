@@ -11,28 +11,18 @@ Hardware layout:
     Right camera — mounted on right side of rover, points at right crop row
     Both cameras are at 8.4" height from ground — confirmed for 6-10" plants.
 
+Design note:
+    Both cameras are the same model (Innomaker U20CAM) on the same USB hub.
+    When both are opened simultaneously they compete for USB bandwidth and
+    the second camera times out. The fix is to open, capture, and close
+    each camera sequentially rather than keeping both open at once.
+    Tested and confirmed working on the Pi with both cameras connected.
+
 Usage:
     from modules.camera import CameraController
 
     camera = CameraController()
-    camera.open()
-
-    left_path  = camera.capture_left()    # capture from left camera
-    right_path = camera.capture_right()   # capture from right camera
-    both_paths = camera.capture_both()    # capture from both at once
-
-    camera.close()
-
-Hardware:
-    Both cameras connect via USB directly to the Pi.
-    They appear as /dev/video0, /dev/video1, etc.
-
-    Run this on the Pi to confirm indexes:
-        ls /dev/video*
-        v4l2-ctl --list-devices
-
-    If indexes are wrong, update CAMERA_LEFT_INDEX and
-    CAMERA_RIGHT_INDEX in config.py — nothing here needs to change.
+    left_path, right_path = camera.capture_both()
 
 Image storage:
     Captured images are saved to CAMERA_SAVE_DIR (from config.py).
@@ -42,7 +32,7 @@ Image storage:
 
 import os
 import time
-import cv2       # OpenCV — handles camera access and image processing
+import cv2
 import config
 
 
@@ -50,216 +40,127 @@ class CameraController:
     """
     Controls both USB cameras on the FieldSight rover.
 
-    Handles opening cameras, capturing frames, saving images locally,
-    and closing cameras cleanly on shutdown.
+    Opens each camera only when capturing, then closes it immediately.
+    This avoids USB bandwidth conflicts when both cameras are the same
+    model on the same USB hub.
 
     Example:
         camera = CameraController()
-        camera.open()
 
         # Capture from both cameras at each scan point
         left_path, right_path = camera.capture_both()
 
-        camera.close()
+        # No need to call open() or close() — handled internally
     """
 
     def __init__(self):
         """
         Sets up the camera controller.
-        Does NOT open cameras yet — call open() after creating the object.
+        Creates the save directory if it doesn't exist.
+        No cameras are opened here — they open only during capture.
         """
-        # Camera objects — None until open() is called
-        self.left_cam  = None
-        self.right_cam = None
-
         # Make sure the save directory exists
-        # This is where images get stored on the Pi before upload
         os.makedirs(config.CAMERA_SAVE_DIR, exist_ok=True)
-
-        # Track whether cameras are open
-        self._open = False
-
-    # ─────────────────────────────────────────────
-    # SETUP AND TEARDOWN
-    # ─────────────────────────────────────────────
-
-    def open(self):
-        """
-        Opens both USB cameras and configures resolution and FPS.
-        Call this once when the rover starts up before capturing any images.
-
-        Raises:
-            RuntimeError: if either camera fails to open
-                          (wrong index, camera not plugged in, etc.)
-        """
-        # Open left camera using index from config
-        # cv2.VideoCapture(index) opens a USB camera by its device index
-        self.left_cam = cv2.VideoCapture(config.CAMERA_LEFT_INDEX)
-
-        if not self.left_cam.isOpened():
-            raise RuntimeError(
-                f"Cannot open left camera at index {config.CAMERA_LEFT_INDEX}. "
-                f"Check that camera is plugged in and run 'ls /dev/video*' on the Pi "
-                f"to confirm the correct index. Update CAMERA_LEFT_INDEX in config.py."
-            )
-
-        # Open right camera
-        self.right_cam = cv2.VideoCapture(config.CAMERA_RIGHT_INDEX)
-
-        if not self.right_cam.isOpened():
-            raise RuntimeError(
-                f"Cannot open right camera at index {config.CAMERA_RIGHT_INDEX}. "
-                f"Check that camera is plugged in and run 'ls /dev/video*' on the Pi "
-                f"to confirm the correct index. Update CAMERA_RIGHT_INDEX in config.py."
-            )
-
-        # Configure resolution and FPS for both cameras
-        # These values come from config.py
-        for cam in [self.left_cam, self.right_cam]:
-            cam.set(cv2.CAP_PROP_FRAME_WIDTH,  config.CAMERA_WIDTH)
-            cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
-            cam.set(cv2.CAP_PROP_FPS,          config.CAMERA_FPS)
-
-        # Warm up both cameras immediately after opening to prevent timeout 
-        for _ in range(2):
-            self.left_cam.read()
-            self.right_cam.read()
-
-        self._open = True
-
-    def close(self):
-        """
-        Releases both cameras and frees their resources.
-        Always call this when the rover is shutting down.
-        main.py should call this in its finally block.
-        """
-        if self.left_cam is not None:
-            self.left_cam.release()
-
-        if self.right_cam is not None:
-            self.right_cam.release()
-
-        time.sleep(2.0)
-        self._open = False
 
     # ─────────────────────────────────────────────
     # IMAGE CAPTURE
+    # Each method opens the camera, captures, saves, and closes.
     # ─────────────────────────────────────────────
 
     def capture_left(self):
         """
-        Captures a single frame from the left-facing camera.
-        Saves it as a JPEG to the CAMERA_SAVE_DIR folder.
+        Opens the left camera, captures one frame, saves it, closes camera.
 
         Returns:
             str — full file path of the saved image
                   e.g. "captured_images/left_1711234567890.jpg"
 
         Raises:
-            RuntimeError: if cameras aren't open or capture fails
+            RuntimeError: if camera cannot be opened or frame read fails
         """
-        return self._capture(self.left_cam, "left")
+        return self._capture_single(config.CAMERA_LEFT_INDEX, "left")
 
     def capture_right(self):
         """
-        Captures a single frame from the right-facing camera.
-        Saves it as a JPEG to the CAMERA_SAVE_DIR folder.
+        Opens the right camera, captures one frame, saves it, closes camera.
 
         Returns:
             str — full file path of the saved image
                   e.g. "captured_images/right_1711234567890.jpg"
 
         Raises:
-            RuntimeError: if cameras aren't open or capture fails
+            RuntimeError: if camera cannot be opened or frame read fails
         """
-        return self._capture(self.right_cam, "right")
+        return self._capture_single(config.CAMERA_RIGHT_INDEX, "right")
 
     def capture_both(self):
         """
-        Captures from both cameras simultaneously using threads.
-        Avoids USB bandwidth timeout caused by sequential reads.
+        Captures from left camera then right camera sequentially.
+        Called by state_machine.py at every scan point.
 
         Returns:
             tuple — (left_image_path, right_image_path)
+
+        Example:
+            left_path, right_path = camera.capture_both()
+            # send both paths to backend_client.py for analysis
         """
-        import threading
+        left_path  = self.capture_left()
+        right_path = self.capture_right()
+        return left_path, right_path
 
-        left_path  = [None]
-        right_path = [None]
-        left_err   = [None]
-        right_err  = [None]
-
-        def capture_left_thread():
-            try:
-                left_path[0] = self._capture(self.left_cam, "left")
-            except Exception as e:
-                left_err[0] = e
-
-        def capture_right_thread():
-            try:
-                right_path[0] = self._capture(self.right_cam, "right")
-            except Exception as e:
-                right_err[0] = e
-
-    # Start both captures at the same time
-        t_left  = threading.Thread(target=capture_left_thread)
-        t_right = threading.Thread(target=capture_right_thread)
-        t_left.start()
-        t_right.start()
-        t_left.join()
-        t_right.join()
-
-        if left_err[0]:
-            raise left_err[0]
-        if right_err[0]:
-            raise right_err[0]
-
-        return left_path[0], right_path[0]
-
-    def _capture(self, cam, label):
+    def _capture_single(self, index, label):
         """
-        Internal method that handles the actual frame capture and save.
-        Used by capture_left() and capture_right().
+        Internal method — opens one camera, captures a frame, closes it.
 
         Parameters:
-            cam   : the cv2.VideoCapture object to read from
-            label : string label for the filename ('left' or 'right')
+            index : USB video device index (from config.py)
+            label : string label for filename ('left' or 'right')
 
         Returns:
             str — full path to the saved image file
 
         Raises:
-            RuntimeError: if cameras not open, or frame read fails
+            RuntimeError: if camera can't open or frame read fails
         """
-        if not self._open:
+        # Open the camera
+        cam = cv2.VideoCapture(index)
+
+        if not cam.isOpened():
             raise RuntimeError(
-                "Cameras are not open. Call camera.open() first."
+                f"Cannot open {label} camera at index {index}. "
+                f"Check that camera is plugged in and run 'ls /dev/video*' "
+                f"to confirm the correct index. "
+                f"Update CAMERA_LEFT_INDEX or CAMERA_RIGHT_INDEX in config.py."
             )
 
-        # Warm up the camera by reading a few throwaway frames
-        # Some USB cameras return dark or blurry frames on first read
-        # after being idle — discarding the first few fixes this
-        for _ in range(1):    #changed from 3 to 1 to reduce warmup frames
-            cam.read()
+        # Set resolution
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH,  config.CAMERA_WIDTH)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
 
-        # Capture the actual frame
-        # ret = True if successful, frame = the image as a numpy array
+        # Allow camera to initialize — USB cameras need a moment
+        # after opening before they return valid frames
+        time.sleep(1.0)
+
+        # Capture the frame
         ret, frame = cam.read()
+
+        # Close camera immediately after capture
+        # This releases USB bandwidth for the next camera
+        cam.release()
 
         if not ret or frame is None:
             raise RuntimeError(
-                f"Failed to capture frame from {label} camera. "
+                f"Failed to capture frame from {label} camera at index {index}. "
                 f"Camera may have disconnected."
             )
 
         # Build filename with timestamp so files never overwrite each other
-        # e.g. "captured_images/left_1711234567890.jpg"
-        timestamp = int(time.time() * 1000)  # milliseconds for uniqueness
+        timestamp = int(time.time() * 1000)
         filename  = f"{label}_{timestamp}.jpg"
         filepath  = os.path.join(config.CAMERA_SAVE_DIR, filename)
 
-        # Save as JPEG with quality setting from config
-        # cv2.IMWRITE_JPEG_QUALITY controls compression (85 = good balance)
+        # Save as JPEG
         encode_params = [cv2.IMWRITE_JPEG_QUALITY, config.CAMERA_JPEG_QUALITY]
         success = cv2.imwrite(filepath, frame, encode_params)
 
@@ -276,18 +177,24 @@ class CameraController:
     # UTILITY
     # ─────────────────────────────────────────────
 
-    def is_open(self):
+    def cameras_available(self):
         """
-        Returns True if both cameras are open and ready.
-        state_machine.py can check this before starting a scan.
+        Checks if both cameras are physically available.
+        state_machine.py can call this before starting a scan.
+
+        Returns:
+            bool — True if both cameras can be opened
         """
-        return (
-            self._open
-            and self.left_cam is not None
-            and self.left_cam.isOpened()
-            and self.right_cam is not None
-            and self.right_cam.isOpened()
-        )
+        for index, label in [
+            (config.CAMERA_LEFT_INDEX,  "left"),
+            (config.CAMERA_RIGHT_INDEX, "right")
+        ]:
+            cam = cv2.VideoCapture(index)
+            available = cam.isOpened()
+            cam.release()
+            if not available:
+                return False
+        return True
 
     def get_save_dir(self):
         """
@@ -305,10 +212,8 @@ class CameraController:
         """
         deleted = 0
         for filename in os.listdir(config.CAMERA_SAVE_DIR):
-            # Only delete image files not any other files
             if filename.endswith(".jpg") or filename.endswith(".jpeg"):
                 filepath = os.path.join(config.CAMERA_SAVE_DIR, filename)
                 os.remove(filepath)
                 deleted += 1
-
         return deleted
