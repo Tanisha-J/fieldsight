@@ -14,7 +14,7 @@ IMPORTANT:
     Stages 1 and 2 can be tested indoors.
 
 Stages:
-    1 — Device scan      : confirms GPS shows up at /dev/ttyUSB*
+    1 — Device scan      : confirms GPS shows up at /dev/ttyACM*
     2 — Raw serial read  : confirms NMEA sentences are coming in
     3 — Fix wait         : waits for valid satellite fix (outdoors only)
     4 — Coordinate check : confirms lat/lng values look reasonable
@@ -88,12 +88,12 @@ def test_device_scan():
 
     print("""
   What this does:
-    Lists all /dev/ttyUSB* devices on the Pi.
-    The VK-162 GPS should appear as /dev/ttyUSB0.
+    Lists all /dev/ttyACM* devices on the Pi.
+    The VK-162 GPS should appear as /dev/ttyACM*.
 
   What to look for:
-    /dev/ttyUSB0 appears in the list.
-    If multiple ttyUSB devices exist, note which one is the GPS.
+    /dev/ttyACM* appears in the list.
+    If multiple /dev/ttyACM* devices exist, note which one is the GPS.
 
   If nothing appears:
     GPS is not plugged in or not recognized.
@@ -103,10 +103,10 @@ def test_device_scan():
 
     try:
         import glob
-        devices = glob.glob('/dev/ttyUSB*')
+        devices = glob.glob('/dev/ttyACM*')
 
         if not devices:
-            result("GPS serial device found", False, "no /dev/ttyUSB* devices")
+            result("GPS serial device found", False, "no /dev/ttyACM* devices")
             print("""
   [FIX] No serial devices found.
   Check GPS is plugged into Pi USB port.
@@ -128,7 +128,7 @@ def test_device_scan():
             print(f"""
   [FIX] Expected {config.GPS_PORT} but found {devices}.
   Update GPS_PORT in config.py to match the actual device.
-  If you have multiple ttyUSB devices, the GPS is usually ttyUSB0.
+  If you have multiple /dev/ttyACM* devices, the GPS is usually /dev/ttyACM*.
             """)
             return False
 
