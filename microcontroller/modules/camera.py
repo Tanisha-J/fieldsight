@@ -120,7 +120,10 @@ class CameraController:
             cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
             cam.set(cv2.CAP_PROP_FPS,          config.CAMERA_FPS)
 
-        
+        # Warm up both cameras immediately after opening to prevent timeout 
+        for _ in range(2):
+            self.left_cam.read()
+            self.right_cam.read()
 
         self._open = True
 
@@ -135,7 +138,7 @@ class CameraController:
 
         if self.right_cam is not None:
             self.right_cam.release()
-            
+
         time.sleep(2.0)
         self._open = False
 
@@ -212,7 +215,7 @@ class CameraController:
         # Warm up the camera by reading a few throwaway frames
         # Some USB cameras return dark or blurry frames on first read
         # after being idle — discarding the first few fixes this
-        for _ in range(3):
+        for _ in range(1):    #changed from 3 to 1 to reduce warmup frames
             cam.read()
 
         # Capture the actual frame
