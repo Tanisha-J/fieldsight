@@ -63,7 +63,7 @@ IMU_I2C_ADDRESS = 0x68   # MPU6050 default I2C address (AD0 pin LOW)
 # run `ls /dev/video*` with both cameras plugged in to confirm.
 # ─────────────────────────────────────────────
 CAMERA_LEFT_INDEX   = 0      # USB index for left-facing camera
-CAMERA_RIGHT_INDEX  = 3      # USB index for right-facing camera
+CAMERA_RIGHT_INDEX  = 2      # USB index for right-facing camera
                               # recheck with `v4l2-ctl --list-devices` on Pi
 CAMERA_WIDTH        = 1280   # capture width in pixels  (720p)
 CAMERA_HEIGHT       = 720    # capture height in pixels (720p)
