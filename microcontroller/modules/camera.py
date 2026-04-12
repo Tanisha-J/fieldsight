@@ -120,6 +120,8 @@ class CameraController:
             cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
             cam.set(cv2.CAP_PROP_FPS,          config.CAMERA_FPS)
 
+        
+
         self._open = True
 
     def close(self):
@@ -133,7 +135,8 @@ class CameraController:
 
         if self.right_cam is not None:
             self.right_cam.release()
-
+            
+        time.sleep(2.0)
         self._open = False
 
     # ─────────────────────────────────────────────
