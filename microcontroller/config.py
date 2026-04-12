@@ -77,7 +77,7 @@ CAMERA_SAVE_DIR     = "captured_images"  # local folder on Pi before upload
 # Run `ls /dev/ttyUSB*` to confirm port — will shift if other USB-serial
 # devices (like an Arduino) are also connected.
 # ─────────────────────────────────────────────
-GPS_PORT        = "/dev/ttyUSB0"   # serial port
+GPS_PORT        = "/dev/ttyACM0"   # serial port
 GPS_BAUDRATE    = 9600             # VK-162 default baud rate
 GPS_TIMEOUT     = 1                # seconds before giving up on a read
 
