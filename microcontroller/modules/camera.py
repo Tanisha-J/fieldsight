@@ -176,21 +176,45 @@ class CameraController:
 
     def capture_both(self):
         """
-        Captures from both cameras at each scan point.
-        Left camera captures the left crop row.
-        Right camera captures the right crop row.
-        Called by state_machine.py at every capture point.
+        Captures from both cameras simultaneously using threads.
+        Avoids USB bandwidth timeout caused by sequential reads.
 
         Returns:
             tuple — (left_image_path, right_image_path)
-
-        Example:
-            left_path, right_path = camera.capture_both()
-            # send both paths to backend_client.py for analysis
         """
-        left_path  = self.capture_left()
-        right_path = self.capture_right()
-        return left_path, right_path
+        import threading
+
+        left_path  = [None]
+        right_path = [None]
+        left_err   = [None]
+        right_err  = [None]
+
+        def capture_left_thread():
+            try:
+                left_path[0] = self._capture(self.left_cam, "left")
+            except Exception as e:
+                left_err[0] = e
+
+        def capture_right_thread():
+            try:
+                right_path[0] = self._capture(self.right_cam, "right")
+            except Exception as e:
+                right_err[0] = e
+
+    # Start both captures at the same time
+        t_left  = threading.Thread(target=capture_left_thread)
+        t_right = threading.Thread(target=capture_right_thread)
+        t_left.start()
+        t_right.start()
+        t_left.join()
+        t_right.join()
+
+        if left_err[0]:
+            raise left_err[0]
+        if right_err[0]:
+            raise right_err[0]
+
+        return left_path[0], right_path[0]
 
     def _capture(self, cam, label):
         """
