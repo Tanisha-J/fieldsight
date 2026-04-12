@@ -8,6 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import rover, images, health, telemetry
 from app.services.mqtt_service import start_mqtt_client
 
+app= FastAPI( title= "FieldSight API")
+
+
+#frontend (react) to talk to backend
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if os.getenv("MQTT_ENABLED", "true").lower() == "true":
@@ -22,6 +27,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origins=["*"]
 )
 
 #register all routes
