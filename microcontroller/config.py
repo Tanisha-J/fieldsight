@@ -1,12 +1,12 @@
 """
-config.py - FieldSight Central Configuration
+config.py
 
 This is the ONLY place where settings and pin numbers live.
-Every other file should be importing from here instead of hardcoding values.
-    If a setting needs to change, change it HERE once.
+Import from here.
+    If you want to change anything, change it here once.
 
-Other files use this:
-    from config import MOTOR_LEFT_IN1, CRUISE_PWM, BACKEND_URL
+use it like this:
+    from config import MOTOR_LEFT_IN1, BACKEND_URL
 """
 
 # GPIO PINS — LEFT MOTOR DRIVER (L298N U4)
@@ -14,13 +14,14 @@ Other files use this:
 
 MOTOR_LEFT_IN1 = 17      # GPIO17 → IN1  (Motor 1 direction)
 MOTOR_LEFT_IN2 = 27      # GPIO27 → IN2  (Motor 1 direction)
-MOTOR_LEFT_IN3 = 23      # GPIO22 → IN3  (Motor 2 direction)
-MOTOR_LEFT_IN4 = 22      # GPIO23 → IN4  (Motor 2 direction)
+MOTOR_LEFT_IN3 = 22      # GPIO22 → IN3  (Motor 2 direction)
+MOTOR_LEFT_IN4 = 23      # GPIO23 → IN4  (Motor 2 direction)
 MOTOR_LEFT_ENA = 18      # GPIO18 (PWM0) → ENA  (Motor 1 speed)
 MOTOR_LEFT_ENB = 13      # GPIO13 (PWM1) → ENB  (Motor 2 speed)
 
 # GPIO PINS — RIGHT MOTOR DRIVER (L298N U1)
 # Controls Motor 3 (front-right) and Motor 4 (rear-right)
+
 MOTOR_RIGHT_IN1 = 5      # GPIO5  → IN1  (Motor 3 direction)
 MOTOR_RIGHT_IN2 = 6      # GPIO6  → IN2  (Motor 3 direction)
 MOTOR_RIGHT_IN3 = 16     # GPIO16 → IN3  (Motor 4 direction)
@@ -28,57 +29,59 @@ MOTOR_RIGHT_IN4 = 20     # GPIO20 → IN4  (Motor 4 direction)
 MOTOR_RIGHT_ENA = 12     # GPIO12 (PWM0) → ENA  (Motor 3 speed)
 MOTOR_RIGHT_ENB = 19     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 
-
-# MOTOR PWM SPEED CONSTANTS
+# MOTOR CONSTANTS
 # 0.0 = off, 1.0 = full speed
-# Hardware supports 0.0–1.0 but we cap in software at MAX_PWM
+# MAX_PWM
+# ex. At 45% PWM on 30 RPM motors with 7" wheels
+#   Speed  ≈ 0.28 mph
+#   Current ≈ 5–6A average
+#   150 ft run ≈ 6 minutes
 
-# At 45% PWM on 30 RPM motors with 7" wheels:
-#   Speed = 0.28 mph
-#   Current = 5–6A average draw across all 4 motors
-#   150 ft run = 6 minutes
- 
-CRUISE_PWM      = 0.45   # normal straight-line driving
-TURN_INNER_PWM  = 0.30   # inside wheels during a turn
-TURN_OUTER_PWM  = 0.60   # outside wheels during a turn
-MAX_PWM         = 0.60   # hard upper limit
+CRUISE_PWM      = 0.45   # straight line driving
+TURN_INNER_PWM  = 0.25   # inside wheels during a curve
+TURN_OUTER_PWM  = 0.45   # outside wheels during a curve
+MAX_PWM         = 0.60   # max
 
-# instead of jumping to CRUISE_PWM instantly, step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes
+# step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes.
 RAMP_STEP       = 0.05   # PWM increment per step
 RAMP_DELAY_SEC  = 0.10   # seconds between ramp steps
 
-
-# GPIO PINS — IMU 
-# Communicates over I2C 
-# Use smbus2: bus = smbus2.SMBus(1), then read registers via bus.read_byte_data()
+# GPIO PINS — IMU (MPU6050)
+# I2C 
+# Use smbus2: bus = smbus2.SMBus(1), then read registers using bus.read_byte_data() 
 
 IMU_SDA         = 2      # GPIO2 → SDA (I2C data)
 IMU_SCL         = 3      # GPIO3 → SCL (I2C clock)
 IMU_I2C_ADDRESS = 0x68   # MPU6050 default I2C address (AD0 pin LOW)
-                         # If AD0 is pulled HIGH, address becomes 0x69
-
+                          # If AD0 is pulled HIGH, address becomes 0x69
 
 # CAMERA
-# Both cameras connect via USB
+# Two USB cameras — one on each side of the rover
+# Both point sideways to capture rows on left and right
+# Camera height confirmed at 9" from ground — good for 6-10" tomato plants.
+# Indexes may shift depending on plug order —
 # run `ls /dev/video*` with both cameras plugged in to confirm.
-
-CAMERA_FRONT_INDEX  = 0      # USB index for front-facing camera
-CAMERA_SIDE_INDEX   = 1      # USB index for side-facing camera
-                              # (was 2 — recheck with `v4l2-ctl --list-devices`)
+# ─────────────────────────────────────────────
+CAMERA_LEFT_INDEX   = 0      # USB index for left-facing camera
+CAMERA_RIGHT_INDEX  = 1      # USB index for right-facing camera
+                              # recheck with `v4l2-ctl --list-devices` on Pi
 CAMERA_WIDTH        = 1280   # capture width in pixels  (720p)
 CAMERA_HEIGHT       = 720    # capture height in pixels (720p)
 CAMERA_FPS          = 30     # frames per second
 CAMERA_JPEG_QUALITY = 85     # JPEG compression quality (0–100)
 CAMERA_SAVE_DIR     = "captured_images"  # local folder on Pi before upload
 
-
-# GPS 
-# Run `ls /dev/ttyUSB*` to confirm port 
-
+# ─────────────────────────────────────────────
+# GPS — VK-162 USB GPS
+# Appears as a serial device, not a GPIO pin.
+# Run `ls /dev/ttyUSB*` to confirm port — will shift if other USB-serial
+# devices (like an Arduino) are also connected.
+# ─────────────────────────────────────────────
 GPS_PORT        = "/dev/ttyUSB0"   # serial port
 GPS_BAUDRATE    = 9600             # VK-162 default baud rate
 GPS_TIMEOUT     = 1                # seconds before giving up on a read
 
+# ─────────────────────────────────────────────
 # BATTERY & POWER (for logging / runtime estimates)
 # Battery: 12V 10Ah LiFePO4
 # ─────────────────────────────────────────────
@@ -97,13 +100,31 @@ ROVER_MAX_SPEED_MPH  = 0.62    # top speed at 100% PWM (30 RPM motors, 7" wheels
 ROVER_CRUISE_MPH     = 0.28    # actual cruise speed at CRUISE_PWM (45%)
 ROVER_CRUISE_FPS     = 0.41    # feet per second at cruise (0.28 mph × 1.467)
 
-CAPTURE_EVERY_FT     = 2.0     # take a photo every N feet traveled
+CAPTURE_EVERY_FT     = 2.0     # distance between photo captures (feet)
 ROW_LENGTH_FT        = 75.0    # length of each crop row to survey
 NUM_ROWS             = 2       # number of rows in the field
 ROW_SPACING_FT       = 3.0     # distance between row centers
 TURN_ANGLE_DEGREES   = 90      # heading change between rows
 
 SCAN_SETTLE_TIME_SEC = 0.3     # pause after stopping before capturing (reduces blur)
+
+# Time to drive between capture points
+# state_machine.py uses this to know how long to drive before next stop
+# Formula: CAPTURE_EVERY_FT / ROVER_CRUISE_FPS = 2.0 / 0.41 = ~4.9 seconds
+DRIVE_BETWEEN_CAPTURES_SEC = CAPTURE_EVERY_FT / ROVER_CRUISE_FPS
+
+# Time to drive one full row
+# Formula: ROW_LENGTH_FT / ROVER_CRUISE_FPS = 75.0 / 0.41 = ~183 seconds
+DRIVE_ROW_SEC = ROW_LENGTH_FT / ROVER_CRUISE_FPS
+
+# Time to drive between rows (row spacing)
+# Formula: ROW_SPACING_FT / ROVER_CRUISE_FPS = 3.0 / 0.41 = ~7.3 seconds
+DRIVE_ROW_SPACING_SEC = ROW_SPACING_FT / ROVER_CRUISE_FPS
+
+# Max seconds to wait for Gemini image analysis to complete
+# If analysis takes longer than this, rover moves on anyway
+# Based on: drive time between plants (~4.9s) gives Gemini time to process
+GEMINI_TIMEOUT_SEC   = 10.0    # seconds before giving up on Gemini response
 
 # ─────────────────────────────────────────────
 # WHEEL GEOMETRY

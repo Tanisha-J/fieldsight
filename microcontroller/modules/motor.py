@@ -1,371 +1,318 @@
 """
-motor.py - FieldSight Motor Control Module
+modules/motor.py - FieldSight Motor Controller
+===============================================
+Controls all 4 motors on the FieldSight rover via two L298N motor drivers.
 
-This file controls the physical wheels of the rover.
-It talks to two L298N motor drivers which then power the four motors.
+This module is imported by state_machine.py and main.py.
+It never hardcodes pin numbers or speed values — everything comes from config.py.
+If a motor spins the wrong direction, fix the pin numbers in config.py.
+Nothing in this file needs to change.
 
-Left driver  (L298N U4) → controls Motor 1 and Motor 2 (left wheels)
-Right driver (L298N U1) → controls Motor 3 and Motor 4 (right wheels)
+Usage:
+    from modules.motor import MotorController
 
-How other files use this:
-    from modules.motor import Motor
+    motors = MotorController()
+    motors.forward()
+    motors.stop()
+    motors.cleanup()
 
-    motor = Motor()
-    motor.setup()
-    motor.forward()
-    motor.stop()
-    motor.cleanup()
+Hardware layout:
+    Left driver  (L298N U4) — Motor 1 (front-left) and Motor 2 (rear-left)
+    Right driver (L298N U1) — Motor 3 (front-right) and Motor 4 (rear-right)
+
+How an L298N channel works:
+    IN1=HIGH, IN2=LOW  → motor spins forward
+    IN1=LOW,  IN2=HIGH → motor spins backward
+    IN1=LOW,  IN2=LOW  → motor coasts to stop
+    ENA = PWM value    → controls speed (0.0=off, 1.0=full, 0.45=cruise)
 """
 
-# RPi.GPIO is the library that lets Python talk to the Pi's physical pins
-    # what actually sends electricity through the GPIO pins
-import RPi.GPIO as GPIO
-
-# time lets us pause the code for a set number of seconds
-# *** used for things like waiting during a turn - unsure if this is needed????
 import time
+from gpiozero import PWMOutputDevice, DigitalOutputDevice
 
-# logging prints messages to the terminal so you can see what's happening
-import logging
-
-# import all our pin numbers from config.py - CHANGE ON CONFIG.PY ONLY
-from config import (
-    MOTOR_LEFT_IN1,   # direction pin - left motors
-    MOTOR_LEFT_IN2,   # direction pin - left motors
-    MOTOR_LEFT_IN3,   # direction pin - left motors
-    MOTOR_LEFT_IN4,   # direction pin - left motors
-    MOTOR_LEFT_ENA,   # speed pin - left motors (PWM)
-    MOTOR_LEFT_ENB,   # speed pin - left motors (PWM)
-    MOTOR_RIGHT_IN1,  # direction pin - right motors
-    MOTOR_RIGHT_IN2,  # direction pin - right motors
-    MOTOR_RIGHT_IN3,  # direction pin - right motors
-    MOTOR_RIGHT_IN4,  # direction pin - right motors
-    MOTOR_RIGHT_ENA,  # speed pin - right motors (PWM)
-    MOTOR_RIGHT_ENB,  # speed pin - right motors (PWM)
-    ROVER_SPEED_MPH,  # target speed from proposal (1 mph)
-    TURN_ANGLE_DEGREES # how many degrees to turn (90)
-)
-
-# sets up logging so messages print to terminal
-logger = logging.getLogger(__name__)
-
-#***DOUBLE CHECK THIS
-# PWM_FREQUENCY is how fast the PWM signal flickers per second
-# 1000 Hz means it flickers 1000 times per second 
-PWM_FREQUENCY = 1000
-
-# DEFAULT_SPEED is the duty cycle percentage for normal driving
-# Duty cycle means what percentage of the time the pin is ON
-# 75 means the pin is ON 75% of the time = 75% power = 75% speed
-# Range is 0 (stopped) to 100 (full speed)
-DEFAULT_SPEED = 75
-
-# TURN_SPEED is slower than driving speed
-# Slower turns are more accurate and easier to control
-TURN_SPEED = 50
-
-# TURN_DURATION is how many seconds the rover turns for
-# This is a placeholder - real version uses IMU to measure exact angle
-# Will need to be tuned during hardware testing
-TURN_DURATION = 1.0
-
+# Import all pin numbers and speed constants from config.py
+# This file never hardcodes a GPIO number or PWM value
+import config
 
 
 class Motor:
     """
-    Controls all four wheels of the FieldSight rover.
+    Represents a single motor channel on an L298N driver.
 
-    explanation for how state_machine.py uses this:
-        motor = Motor()
-        motor.setup()       # always call this first
-        motor.forward()     # start driving
-        motor.stop()        # stop wheels
-        motor.turn_right_90()  # turn between rows
-        motor.cleanup()     # always call this last
+    Each L298N has two channels (A and B), each controlling one motor.
+    A channel needs three pins:
+        en_pin  — PWM pin that controls speed (ENA or ENB)
+        in1_pin — direction pin 1 (IN1 or IN3)
+        in2_pin — direction pin 2 (IN2 or IN4)
     """
+
+    def __init__(self, en_pin, in1_pin, in2_pin):
+        """
+        Sets up the three GPIO pins for this motor channel.
+
+        Parameters:
+            en_pin  : GPIO pin number for ENA or ENB (PWM speed control)
+            in1_pin : GPIO pin number for IN1 or IN3 (direction)
+            in2_pin : GPIO pin number for IN2 or IN4 (direction)
+        """
+        # PWMOutputDevice lets us set any value from 0.0 to 1.0
+        # This controls the motor speed via pulse width modulation
+        self.en  = PWMOutputDevice(en_pin)
+
+        # DigitalOutputDevice is just HIGH or LOW — controls direction
+        self.in1 = DigitalOutputDevice(in1_pin)
+        self.in2 = DigitalOutputDevice(in2_pin)
+
+    def forward(self, speed=config.CRUISE_PWM):
+        """
+        Spins this motor forward at the given speed.
+
+        Parameters:
+            speed : PWM duty cycle from 0.0 to MAX_PWM (default: CRUISE_PWM)
+                    0.0 = stopped, 1.0 = full speed, 0.45 = cruise speed
+        """
+        # Clamp speed so it never exceeds the safety ceiling from config
+        speed = min(speed, config.MAX_PWM)
+        self.in1.on()           # IN1 HIGH
+        self.in2.off()          # IN2 LOW  → forward direction on L298N
+        self.en.value = speed   # set speed via PWM
+
+    def backward(self, speed=config.CRUISE_PWM):
+        """
+        Spins this motor backward at the given speed.
+
+        Parameters:
+            speed : PWM duty cycle from 0.0 to MAX_PWM (default: CRUISE_PWM)
+        """
+        speed = min(speed, config.MAX_PWM)
+        self.in1.off()          # IN1 LOW
+        self.in2.on()           # IN2 HIGH → backward direction on L298N
+        self.en.value = speed
+
+    def stop(self):
+        """
+        Stops this motor immediately (cuts power, coasts to stop).
+        Sets EN to 0 first so the motor loses power before direction pins clear.
+        """
+        self.en.value = 0   # cut power first
+        self.in1.off()      # clear direction pins
+        self.in2.off()
+
+    def cleanup(self):
+        """
+        Releases this motor's GPIO pins back to the system.
+        Always call this when done — uncleaned pins can cause issues on next run.
+        """
+        self.stop()
+        self.en.close()
+        self.in1.close()
+        self.in2.close()
+
+
+class MotorController:
     """
-    class Motor:              # example
+    Controls all 4 motors on the FieldSight rover together.
 
-    def __init__(self):   # runs automatically when you create the object
-        self.pwm_left_a = None   # this object has a pwm_left_a, starts empty
+    This is the class that state_machine.py and main.py import and use.
+    It wraps the 4 individual Motor objects and exposes high-level
+    movement commands like forward(), turn_left(), stop().
 
-    def setup(self):      # functions this object can do
-    def forward(self):    
-    def stop(self):      
+    Example:
+        motors = MotorController()
+        motors.forward()
+        time.sleep(3)
+        motors.stop()
+        motors.cleanup()
     """
 
     def __init__(self):
         """
-        __init__ runs once when you create the Motor object.
-        It just sets up variables - nothing actually happens to the
-        hardware yet. setup() is what actually activates the pins.
+        Creates Motor objects for all 4 wheels using pin numbers from config.py.
+        Called once when the rover starts up.
         """
+        # Left side — controlled by left L298N driver (U4)
+        # Motor 1 uses ENA pin for speed, IN1/IN2 for direction
+        self.m1 = Motor(
+            config.MOTOR_LEFT_ENA,
+            config.MOTOR_LEFT_IN1,
+            config.MOTOR_LEFT_IN2
+        )
+        # Motor 2 uses ENB pin for speed, IN3/IN4 for direction
+        self.m2 = Motor(
+            config.MOTOR_LEFT_ENB,
+            config.MOTOR_LEFT_IN3,
+            config.MOTOR_LEFT_IN4
+        )
 
-        # These will hold our PWM objects once setup() runs
-        # PWM objects are what control the speed of each motor
-        # They start as None because they don't exist yet
-        self.pwm_left_a  = None   # controls speed of Motor 1
-        self.pwm_left_b  = None   # controls speed of Motor 2
-        self.pwm_right_a = None   # controls speed of Motor 3
-        self.pwm_right_b = None   # controls speed of Motor 4
+        # Right side — controlled by right L298N driver (U1)
+        self.m3 = Motor(
+            config.MOTOR_RIGHT_ENA,
+            config.MOTOR_RIGHT_IN1,
+            config.MOTOR_RIGHT_IN2
+        )
+        self.m4 = Motor(
+            config.MOTOR_RIGHT_ENB,
+            config.MOTOR_RIGHT_IN3,
+            config.MOTOR_RIGHT_IN4
+        )
 
-        # is_setup tracks whether setup() has been called
-        # used to prevent running motors before pins are ready
-        self.is_setup = False
+        # Convenience list for operations that apply to all motors
+        self._all = [self.m1, self.m2, self.m3, self.m4]
 
-        logger.info("Motor object created. Call setup() before use.")
+    # ─────────────────────────────────────────────
+    # MOVEMENT COMMANDS
+    # These are the methods state_machine.py calls
+    # ─────────────────────────────────────────────
 
-
-    def setup(self):
+    def forward(self, speed=config.CRUISE_PWM):
         """
-        Activates all the GPIO pins and gets them ready to use, turning on motor system
+        Drives the rover forward in a straight line.
+        Uses soft-start ramp to avoid current spikes.
+
+        Parameters:
+            speed : target PWM speed (default: CRUISE_PWM from config)
         """
+        self.ramp_to(speed)
 
-        # GPIO.setmode tells the Pi which numbering system to use
-        # GPIO.BCM means we use the GPIO numbers (like GPIO17)
-        GPIO.setmode(GPIO.BCM)
-
-        # GPIO.setup tells the Pi whether each pin is sending or receiving
-        # GPIO.OUT means this pin sends signals OUT to the motor driver
-
-        # left driver direction pins
-        GPIO.setup(MOTOR_LEFT_IN1, GPIO.OUT)
-        GPIO.setup(MOTOR_LEFT_IN2, GPIO.OUT)
-        GPIO.setup(MOTOR_LEFT_IN3, GPIO.OUT)
-        GPIO.setup(MOTOR_LEFT_IN4, GPIO.OUT)
-
-        # left driver speed pins
-        GPIO.setup(MOTOR_LEFT_ENA, GPIO.OUT)
-        GPIO.setup(MOTOR_LEFT_ENB, GPIO.OUT)
-
-        # right driver direction pins
-        GPIO.setup(MOTOR_RIGHT_IN1, GPIO.OUT)
-        GPIO.setup(MOTOR_RIGHT_IN2, GPIO.OUT)
-        GPIO.setup(MOTOR_RIGHT_IN3, GPIO.OUT)
-        GPIO.setup(MOTOR_RIGHT_IN4, GPIO.OUT)
-
-        # right driver speed pins
-        GPIO.setup(MOTOR_RIGHT_ENA, GPIO.OUT)
-        GPIO.setup(MOTOR_RIGHT_ENB, GPIO.OUT)
-
-        # GPIO.PWM creates a PWM object on a pin at a set frequency
-        # First argument is the pin number
-        # Second argument is the frequency in Hz (how fast it flickers)
-        self.pwm_left_a  = GPIO.PWM(MOTOR_LEFT_ENA,  PWM_FREQUENCY)
-        self.pwm_left_b  = GPIO.PWM(MOTOR_LEFT_ENB,  PWM_FREQUENCY)
-        self.pwm_right_a = GPIO.PWM(MOTOR_RIGHT_ENA, PWM_FREQUENCY)
-        self.pwm_right_b = GPIO.PWM(MOTOR_RIGHT_ENB, PWM_FREQUENCY)
-
-        # .start() activates the PWM signal at a given duty cycle
-        # starting at 0 means 0% power which means motors not moving yet
-        # Speed gets set later when forward() or other functions are called
-        self.pwm_left_a.start(0)
-        self.pwm_left_b.start(0)
-        self.pwm_right_a.start(0)
-        self.pwm_right_b.start(0)
-
-        # mark setup as done so other functions know they can run
-        self.is_setup = True
-
-        logger.info("Setup complete. All pins ready.")
-
-
-    def forward(self, speed=DEFAULT_SPEED):
+    def backward(self, speed=config.CRUISE_PWM):
         """
-        Drives the rover straight forward.
+        Drives the rover backward in a straight line.
+        No ramp on backward — used for short corrections only.
 
-        speed is a number from 0 to 100 representing power percentage
-        Default is DEFAULT_SPEED (75%) which comes from the constant above
-
-        How forward direction works on L298N:
-            IN1=HIGH, IN2=LOW → motor spins forward
-            IN3=HIGH, IN4=LOW → motor spins forward
+        Parameters:
+            speed : target PWM speed (default: CRUISE_PWM from config)
         """
-
-        # safety check - don't run if setup() was never called
-        if not self.is_setup:
-            logger.error("[Motor] Cannot drive - setup() has not been called")
-            return
-
-        # GPIO.HIGH means turn the pin ON (send electricity through it)
-        # GPIO.LOW means turn the pin OFF
-
-        # set left motors to spin forward
-        # IN1 HIGH + IN2 LOW = forward direction for Motor 1
-        GPIO.output(MOTOR_LEFT_IN1, GPIO.HIGH)
-        GPIO.output(MOTOR_LEFT_IN2, GPIO.LOW)
-        # IN3 HIGH + IN4 LOW = forward direction for Motor 2
-        GPIO.output(MOTOR_LEFT_IN3, GPIO.HIGH)
-        GPIO.output(MOTOR_LEFT_IN4, GPIO.LOW)
-
-        # set right motors to spin forward
-        # same pattern - IN1 HIGH + IN2 LOW = forward
-        GPIO.output(MOTOR_RIGHT_IN1, GPIO.HIGH)
-        GPIO.output(MOTOR_RIGHT_IN2, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN3, GPIO.HIGH)
-        GPIO.output(MOTOR_RIGHT_IN4, GPIO.LOW)
-
-        # .ChangeDutyCycle sets the speed
-        # speed=75 means 75% power
-        # all four channels get the same speed for straight driving
-        self.pwm_left_a.ChangeDutyCycle(speed)
-        self.pwm_left_b.ChangeDutyCycle(speed)
-        self.pwm_right_a.ChangeDutyCycle(speed)
-        self.pwm_right_b.ChangeDutyCycle(speed)
-
-        logger.info(f"[Motor] Driving forward at {speed}% speed")
-
+        for motor in self._all:
+            motor.backward(speed)
 
     def stop(self):
         """
-        Stops all four wheels immediately.
-
-        Sets all direction pins LOW and speed to 0.
-        This is a hard stop - wheels stop spinning right away.
+        Stops all 4 motors immediately.
+        This is safe to call at any time including from a Ctrl+C handler.
         """
+        for motor in self._all:
+            motor.stop()
 
-        if not self.is_setup:
-            logger.error("[Motor] Cannot stop - setup() has not been called")
-            return
-
-        # set all direction pins LOW
-        # when both IN pins are LOW the motor driver cuts power to the motor
-        GPIO.output(MOTOR_LEFT_IN1,  GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN2,  GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN3,  GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN4,  GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN1, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN2, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN3, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN4, GPIO.LOW)
-
-        # set speed to 0 on all PWM channels
-        self.pwm_left_a.ChangeDutyCycle(0)
-        self.pwm_left_b.ChangeDutyCycle(0)
-        self.pwm_right_a.ChangeDutyCycle(0)
-        self.pwm_right_b.ChangeDutyCycle(0)
-
-        logger.info("[Motor] Stopped")
-
-
-    def turn_right_90(self, speed=TURN_SPEED):
+    def turn_left(self):
         """
-        Turns the rover 90 degrees to the right.
-        Used between crop rows.
-
-        Tank drive turning works by spinning the two sides in
-        opposite directions at the same time.
-        Left wheels go forward, right wheels go backward = turn right.
-
-        NOTE: TURN_DURATION is a placeholder time value.
-        Real version should use IMU to measure the actual angle.
-        Motor team needs to tune TURN_DURATION during hardware testing.
+        Curves the rover left by slowing the left wheels and speeding up the right.
+        Left wheels  → TURN_INNER_PWM (slower)
+        Right wheels → TURN_OUTER_PWM (faster)
+        The rover curves toward the slower side.
         """
+        self.m1.forward(config.TURN_INNER_PWM)  # front-left  slow
+        self.m2.forward(config.TURN_INNER_PWM)  # rear-left   slow
+        self.m3.forward(config.TURN_OUTER_PWM)  # front-right fast
+        self.m4.forward(config.TURN_OUTER_PWM)  # rear-right  fast
 
-        if not self.is_setup:
-            logger.error("[Motor] Cannot turn - setup() has not been called")
-            return
+    def turn_right(self):
+        """
+        Curves the rover right by slowing the right wheels and speeding up the left.
+        Right wheels → TURN_INNER_PWM (slower)
+        Left wheels  → TURN_OUTER_PWM (faster)
+        """
+        self.m1.forward(config.TURN_OUTER_PWM)  # front-left  fast
+        self.m2.forward(config.TURN_OUTER_PWM)  # rear-left   fast
+        self.m3.forward(config.TURN_INNER_PWM)  # front-right slow
+        self.m4.forward(config.TURN_INNER_PWM)  # rear-right  slow
 
-        logger.info("[Motor] Turning right 90 degrees...")
+    def pivot_left(self):
+        """
+        Spins the rover in place to the left.
+        Left wheels go backward, right wheels go forward.
+        Use this for sharp 90 degree turns between crop rows.
+        """
+        self.m1.backward(config.CRUISE_PWM)  # front-left  backward
+        self.m2.backward(config.CRUISE_PWM)  # rear-left   backward
+        self.m3.forward(config.CRUISE_PWM)   # front-right forward
+        self.m4.forward(config.CRUISE_PWM)   # rear-right  forward
 
-        # left wheels forward
-        # IN1 HIGH + IN2 LOW = forward
-        GPIO.output(MOTOR_LEFT_IN1, GPIO.HIGH)
-        GPIO.output(MOTOR_LEFT_IN2, GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN3, GPIO.HIGH)
-        GPIO.output(MOTOR_LEFT_IN4, GPIO.LOW)
+    def pivot_right(self):
+        """
+        Spins the rover in place to the right.
+        Right wheels go backward, left wheels go forward.
+        """
+        self.m1.forward(config.CRUISE_PWM)   # front-left  forward
+        self.m2.forward(config.CRUISE_PWM)   # rear-left   forward
+        self.m3.backward(config.CRUISE_PWM)  # front-right backward
+        self.m4.backward(config.CRUISE_PWM)  # rear-right  backward
 
-        # right wheels backward
-        # IN1 LOW + IN2 HIGH = backward (opposite of forward)
-        GPIO.output(MOTOR_RIGHT_IN1, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN2, GPIO.HIGH)
-        GPIO.output(MOTOR_RIGHT_IN3, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN4, GPIO.HIGH)
+    def set_speeds(self, left_speed, right_speed):
+        """
+        Sets left and right side speeds independently.
+        Used by state_machine.py for fine-grained control during navigation.
 
-        # set speed for the turn
-        self.pwm_left_a.ChangeDutyCycle(speed)
-        self.pwm_left_b.ChangeDutyCycle(speed)
-        self.pwm_right_a.ChangeDutyCycle(speed)
-        self.pwm_right_b.ChangeDutyCycle(speed)
+        Parameters:
+            left_speed  : PWM value for left side motors (0.0 to MAX_PWM)
+            right_speed : PWM value for right side motors (0.0 to MAX_PWM)
+        """
+        self.m1.forward(left_speed)
+        self.m2.forward(left_speed)
+        self.m3.forward(right_speed)
+        self.m4.forward(right_speed)
 
-        # wait for the turn to complete
-        # time.sleep pauses the code for TURN_DURATION seconds
-        # during this time the wheels keep spinning
-        time.sleep(TURN_DURATION)
+    # ─────────────────────────────────────────────
+    # SOFT START RAMP
+    # Gradually increases speed from 0 to target.
+    # Prevents large current spikes that can reboot the Pi.
+    # ─────────────────────────────────────────────
 
-        # stop after the turn is done
+    def ramp_to(self, target=config.CRUISE_PWM):
+        """
+        Gradually ramps all motors up to the target speed.
+        Starts at 0 and steps up by RAMP_STEP every RAMP_DELAY_SEC.
+
+        Parameters:
+            target : final PWM speed to reach (default: CRUISE_PWM)
+
+        Example:
+            With RAMP_STEP=0.05 and target=0.45:
+            Speed goes 0.0 → 0.05 → 0.10 → ... → 0.45
+            Each step takes RAMP_DELAY_SEC seconds
+        """
+        # Clamp target to safety ceiling
+        target = min(target, config.MAX_PWM)
+
+        # First set all motors to forward direction at 0 speed
+        for motor in self._all:
+            motor.forward(0.0)
+
+        # Then step up speed gradually
+        speed = 0.0
+        while speed < target:
+            speed = min(speed + config.RAMP_STEP, target)
+            for motor in self._all:
+                motor.forward(speed)
+            time.sleep(config.RAMP_DELAY_SEC)
+
+    def ramp_down(self):
+        """
+        Gradually ramps all motors down from current speed to 0.
+        Smoother than calling stop() directly — reduces mechanical stress.
+        Used at the end of a row before taking a photo.
+        """
+        # Step down from cruise speed to 0
+        speed = config.CRUISE_PWM
+        while speed > 0:
+            speed = max(speed - config.RAMP_STEP, 0.0)
+            for motor in self._all:
+                motor.forward(speed)
+            time.sleep(config.RAMP_DELAY_SEC)
+
+        # Make sure everything is fully stopped
         self.stop()
 
-        logger.info("[Motor] Turn complete")
-
-
-    def turn_left_90(self, speed=TURN_SPEED):
-        """
-        Turns the rover 90 degrees to the left.
-        Mirror image of turn_right_90.
-
-        Right wheels go forward, left wheels go backward = turn left.
-        """
-
-        if not self.is_setup:
-            logger.error("[Motor] Cannot turn - setup() has not been called")
-            return
-
-        logger.info("[Motor] Turning left 90 degrees...")
-
-        # left wheels backward
-        GPIO.output(MOTOR_LEFT_IN1, GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN2, GPIO.HIGH)
-        GPIO.output(MOTOR_LEFT_IN3, GPIO.LOW)
-        GPIO.output(MOTOR_LEFT_IN4, GPIO.HIGH)
-
-        # right wheels forward
-        GPIO.output(MOTOR_RIGHT_IN1, GPIO.HIGH)
-        GPIO.output(MOTOR_RIGHT_IN2, GPIO.LOW)
-        GPIO.output(MOTOR_RIGHT_IN3, GPIO.HIGH)
-        GPIO.output(MOTOR_RIGHT_IN4, GPIO.LOW)
-
-        # set speed
-        self.pwm_left_a.ChangeDutyCycle(speed)
-        self.pwm_left_b.ChangeDutyCycle(speed)
-        self.pwm_right_a.ChangeDutyCycle(speed)
-        self.pwm_right_b.ChangeDutyCycle(speed)
-
-        # wait for turn to complete then stop
-        time.sleep(TURN_DURATION)
-        self.stop()
-
-        logger.info("[Motor] Turn complete")
-
+    # ─────────────────────────────────────────────
+    # CLEANUP
+    # ─────────────────────────────────────────────
 
     def cleanup(self):
         """
-        Shuts everything down safely.
-        ALWAYS call this when you are done using the motors.
-
-        If you don't call this the GPIO pins stay active even after
-        your code stops running which can damage the Pi or motors.
-        Think of it like properly shutting down a computer instead
-        of just pulling the power cable.
+        Stops all motors and releases all GPIO pins.
+        Always call this when the rover is shutting down.
+        state_machine.py and main.py should call this in their
+        finally blocks so pins are always released even if something crashes.
         """
-
-        if not self.is_setup:
-            return
-
-        # stop all motors first
         self.stop()
-
-        # .stop() on a PWM object turns off the PWM signal completely
-        # different from the stop() method above which just sets speed to 0
-        self.pwm_left_a.stop()
-        self.pwm_left_b.stop()
-        self.pwm_right_a.stop()
-        self.pwm_right_b.stop()
-
-        # GPIO.cleanup() resets ALL pins back to their default state
-        # this is the safe shutdown for the entire GPIO system
-        GPIO.cleanup()
-
-        self.is_setup = False
-
-        logger.info("[Motor] Cleanup complete. GPIO pins released.")
+        for motor in self._all:
+            motor.cleanup()
