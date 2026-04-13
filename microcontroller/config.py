@@ -12,22 +12,22 @@ use it like this:
 # GPIO PINS — LEFT MOTOR DRIVER (L298N U4)
 # Controls Motor 1 (front-left) and Motor 2 (rear-left)
 
-MOTOR_LEFT_IN1 = 17      # GPIO17 → IN1  (Motor 1 direction)
-MOTOR_LEFT_IN2 = 27      # GPIO27 → IN2  (Motor 1 direction)
-MOTOR_LEFT_IN3 = 22      # GPIO22 → IN3  (Motor 2 direction)
-MOTOR_LEFT_IN4 = 23      # GPIO23 → IN4  (Motor 2 direction)
-MOTOR_LEFT_ENA = 18      # GPIO18 (PWM0) → ENA  (Motor 1 speed)
-MOTOR_LEFT_ENB = 13      # GPIO13 (PWM1) → ENB  (Motor 2 speed)
+MOTOR_LEFT_IN1 = 6      # GPIO17 → IN1  (Motor 1 direction)
+MOTOR_LEFT_IN2 = 5      # GPIO27 → IN2  (Motor 1 direction)
+MOTOR_LEFT_IN3 = 20      # GPIO22 → IN3  (Motor 2 direction)
+MOTOR_LEFT_IN4 = 16      # GPIO23 → IN4  (Motor 2 direction)
+MOTOR_LEFT_ENA = 12      # GPIO18 (PWM0) → ENA  (Motor 1 speed)
+MOTOR_LEFT_ENB = 19      # GPIO13 (PWM1) → ENB  (Motor 2 speed)
 
 # GPIO PINS — RIGHT MOTOR DRIVER (L298N U1)
 # Controls Motor 3 (front-right) and Motor 4 (rear-right)
 
-MOTOR_RIGHT_IN1 = 5      # GPIO5  → IN1  (Motor 3 direction)
-MOTOR_RIGHT_IN2 = 6      # GPIO6  → IN2  (Motor 3 direction)
-MOTOR_RIGHT_IN3 = 16     # GPIO16 → IN3  (Motor 4 direction)
-MOTOR_RIGHT_IN4 = 20     # GPIO20 → IN4  (Motor 4 direction)
-MOTOR_RIGHT_ENA = 12     # GPIO12 (PWM0) → ENA  (Motor 3 speed)
-MOTOR_RIGHT_ENB = 19     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
+MOTOR_RIGHT_IN1 = 17      # GPIO5  → IN1  (Motor 3 direction)
+MOTOR_RIGHT_IN2 = 27      # GPIO6  → IN2  (Motor 3 direction)
+MOTOR_RIGHT_IN3 = 22     # GPIO16 → IN3  (Motor 4 direction)
+MOTOR_RIGHT_IN4 = 23     # GPIO20 → IN4  (Motor 4 direction)
+MOTOR_RIGHT_ENA = 18     # GPIO12 (PWM0) → ENA  (Motor 3 speed)
+MOTOR_RIGHT_ENB = 13     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 
 # MOTOR CONSTANTS
 # 0.0 = off, 1.0 = full speed
@@ -100,14 +100,29 @@ ROVER_MAX_SPEED_MPH  = 0.62    # top speed at 100% PWM (30 RPM motors, 7" wheels
 ROVER_CRUISE_MPH     = 0.28    # actual cruise speed at CRUISE_PWM (45%)
 ROVER_CRUISE_FPS     = 0.41    # feet per second at cruise (0.28 mph × 1.467)
 
-CAPTURE_EVERY_FT     = 2.0     # distance between photo captures (feet)
-ROW_LENGTH_FT        = 75.0    # length of each crop row to survey
-NUM_ROWS             = 2       # number of rows in the field
-ROW_SPACING_FT       = 3.0     # distance between row centers
-TURN_ANGLE_DEGREES   = 90      # heading change between rows
 
+# Field dimensions — confirmed for demo
+ROW_LENGTH_IN        = 100.0   # inches — length of each crop row
+ROW_LENGTH_FT        = ROW_LENGTH_IN / 12.0   # = 8.33 feet
+ROW_SPACING_IN       = 98.0    # inches — distance to travel sideways between rows
+ROW_SPACING_FT       = ROW_SPACING_IN / 12.0  # = 8.17 feet
+NUM_ROWS             = 2       # number of rows to scan
+TURN_ANGLE_DEGREES   = 90      # degrees to turn at end of each row
+ 
+# Capture pattern — 4 stops per row, evenly spaced
+CAPTURES_PER_ROW     = 4       # number of photo stops per row
+# Distance between each capture point
+# Formula: ROW_LENGTH_FT / (CAPTURES_PER_ROW + 1) = 8.33 / 5 = ~1.67 feet
+CAPTURE_EVERY_FT     = ROW_LENGTH_FT / (CAPTURES_PER_ROW + 1)
+ 
 SCAN_SETTLE_TIME_SEC = 0.3     # pause after stopping before capturing (reduces blur)
-
+ 
+# ─────────────────────────────────────────────
+# DERIVED TIMING CONSTANTS
+# Pre-calculated so state_machine.py doesn't do math inline.
+# All based on ROVER_CRUISE_FPS = 0.41 ft/s.
+# ─────────────────────────────────────────────
+ 
 # Time to drive between capture points
 # state_machine.py uses this to know how long to drive before next stop
 # Formula: CAPTURE_EVERY_FT / ROVER_CRUISE_FPS = 2.0 / 0.41 = ~4.9 seconds
@@ -121,6 +136,11 @@ DRIVE_ROW_SEC = ROW_LENGTH_FT / ROVER_CRUISE_FPS
 # Formula: ROW_SPACING_FT / ROVER_CRUISE_FPS = 3.0 / 0.41 = ~7.3 seconds
 DRIVE_ROW_SPACING_SEC = ROW_SPACING_FT / ROVER_CRUISE_FPS
 
+# Time to pivot 90 degrees in place
+# TUNE THIS — run motors.pivot_left() and time how long a 90 degree turn takes
+# on your actual surface (soil/tanbark). Adjust until turns are accurate.
+PIVOT_90_SEC         = 2.5     # seconds — NEEDS TUNING on real surface
+ 
 # Max seconds to wait for Gemini image analysis to complete
 # If analysis takes longer than this, rover moves on anyway
 # Based on: drive time between plants (~4.9s) gives Gemini time to process
