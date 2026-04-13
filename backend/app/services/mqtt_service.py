@@ -90,13 +90,13 @@ def start_mqtt_client() -> mqtt.Client:
     _client = client
     return client
 
-
-def publish_command(command: str, rover_id: int, value: str | None = None) -> dict:
+def publish_command(command: str, rover_id: int, session_id: int = None, value: str | None = None) -> dict:
     client = start_mqtt_client()
 
     payload = {
         "command": command,
         "rover_id": rover_id,
+        "session_id": session_id,
         "value": value,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
