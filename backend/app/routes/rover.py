@@ -5,7 +5,7 @@ from app. services.rover_service import start_rover, stop_rover
 
 router= APIRouter(prefix="/rover",tags= ["rover"])
 
-@rover .post("/start/{session_id}")
+@rover.post("/start/{session_id}")
 def start (session_id: int, db: Session= Depends (get_db)):
     try:
         result= start_rover(db=db, session_id=session_id)

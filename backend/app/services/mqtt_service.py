@@ -12,13 +12,23 @@ from app.services.telemetry_service import store_telemetry
 MQTT_HOST = os.getenv("MQTT_HOST", "127.0.0.1")
 
 # getting port from environment variables
-MQTT_PORT = os.getenv("MQTT_PORT", "3306")
+MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 
 # what the rover publishes telemetry to 
-MQTT_TELEMETRY_TOPIC = os.getenv("MQTT_TELEMTRY_TOPIC", "rover/telemetry")
+MQTT_TELEMETRY_TOPIC = os.getenv("MQTT_TELEMETRY_TOPIC", "rover/telemetry")
 
 # what the backend publishes commands to 
 MQTT_CMD_TOPIC = os.getenv("MQTT_CMD_TOPIC", "rover/cmd")
+
+MQTT_USERNAME = os.getenv("MQTT_USERNAME")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
+
+MQTT_USE_TLS = os.getenv("MQTT_USE_TLS", "false").lower() == "true"
+MQTT_CA_CERT = os.getenv("MQTT_CA_CERT")
+MQTT_CLIENT_CERT = os.getenv("MQTT_CLIENT_CERT")
+MQTT_CLIENT_KEY = os.getenv("MQTT_CLIENT_KEY")
+MQTT_TLS_INSECURE = os.getenv("MQTT_TLS_INSECURE", "false").lower() == "true"
+
 
 # the actual MQTT client variable, created when start_mqtt_client() is run
 _client: mqtt.Client | None = None
@@ -69,6 +79,19 @@ def on_message(client, userdata, msg):
     finally:
         db.close()
 
+def _configure_auth_and_tls(client: mqtt.Client) -> None:
+    if MQTT_USERNAME:
+        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+
+    if MQTT_USE_TLS:
+        if not MQTT_CA_CERT:
+            raise RuntimeError("MQTT_USE_TLS=true but MQTT_CA_CERT is missing")
+        client.tls_set(
+            ca_certs=MQTT_CA_CERT,
+            certfile=MQTT_CLIENT_CERT or None,
+            keyfile=MQTT_CLIENT_KEY or None,
+        )
+        client.tls_insecure_set(MQTT_TLS_INSECURE)
 
 def start_mqtt_client() -> mqtt.Client:
     global _client
@@ -78,6 +101,7 @@ def start_mqtt_client() -> mqtt.Client:
     print(f"[MQTT] starting client for {MQTT_HOST}:{MQTT_PORT}")
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    _configure_auth_and_tls(client)
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_HOST, MQTT_PORT, 60)
