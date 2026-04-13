@@ -9,12 +9,13 @@ from app.services.mqtt_service import publish_command
 router = APIRouter(prefix="/rover", tags=["rover"])
 
 @router.post("/start")
-def start(session_id: int, db: Session = Depends(get_db)):
+def start(farmer_id: int, db: Session = Depends(get_db)):
     try:
         session = RoverSession(
             farmer_id=farmer_id,
             session_date=date.today(),
-            status="Running"
+            status="Running",
+            active_command="start"
         )
         db.add(session)
         db.commit()

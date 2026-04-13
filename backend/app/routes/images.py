@@ -48,13 +48,14 @@ async def upload_scan(
     if result["disease_status"] in ("HEALTHY"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
     #3. upload to oci
-    image_key = upload_to_oci(image_bytes, image.filename)
+    image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
     #4. save to db
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
+        image_url=image_url,
         image_key=image_key,
         gemini_status="completed",
         gps_lat=gps_lat,
@@ -64,10 +65,17 @@ async def upload_scan(
     db.commit()
     db.refresh(scan)
     
-    return {"status": "stored", "scan_id": scan.scan_id}
+    return {
+        "status": "stored",
+        "scan_id": scan.scan_id,
+        "image_url": image_url,
+        "disease_status": result["disease_status"],
+        "severity": result["severity"],
+        "short_explanation": result.get("short_explanation"),
+    }
 
-@router.post("/scan/upload")
-async def upload_scan(
+@router.post("/scans/upload-base64")
+async def upload_scan_base64(
     session_id: int = Form(...),
     farmer_id: int = Form(...),
     gps_lat: float = Form(...),
@@ -78,10 +86,10 @@ async def upload_scan(
     image_bytes = base64.b64decode(image_base64)
     result = await analyze_image(image_bytes)
 
-    if result["disease_status"] == "HEALTHY":
+    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
 
-    image_url, image_key = upload_to_oci(image_bytes, "scan.jpg")
+    image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
 
     scan = Scan(
         session_id=session_id,

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 # insert telemetry data into table and saves it
 def store_telemetry(
     db: Session,
+    session_id: int,
     rover_id: int,
     battery: float,
     gps_lat: float,
