@@ -40,7 +40,7 @@ MOTOR_RIGHT_ENB = 13     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 CRUISE_PWM      = 0.45   # straight line driving
 TURN_INNER_PWM  = 0.0   # inside wheels during a curve
 TURN_OUTER_PWM  = 0.45   # outside wheels during a curve
-MAX_PWM         = 0.80   # max
+MAX_PWM         = 1.0   # max
 
 # step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes.
 RAMP_STEP       = 0.05   # PWM increment per step
