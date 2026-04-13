@@ -21,7 +21,7 @@ def store_telemetry(
     db.execute(
         text(
             """
-            INSERT INTO Telemetry (rover_id, battery, gps_lat, gps_lng, heading, captured_at)
+            INSERT INTO Telemetry (session_id, rover_id, battery, gps_lat, gps_lng, heading, captured_at)
             VALUES (:rover_id, :battery, :gps_lat, :gps_lng, :heading, :captured_at)
             """
         ),

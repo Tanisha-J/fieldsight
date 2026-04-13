@@ -66,6 +66,7 @@ def on_message(client, userdata, msg):
     try:
         store_telemetry(
             db=db,
+            session_id=int(payload["session_id"]),
             rover_id=int(payload["rover_id"]),
             battery=float(payload["battery"]),
             gps_lat=float(payload["gps_lat"]),

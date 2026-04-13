@@ -35,7 +35,7 @@ class Scan(Base):
     scan_id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(Integer, ForeignKey("Rover_Sessions.session_id"), nullable=True)
     farmer_id = Column(Integer, ForeignKey("Farmers.farmer_id"), nullable=False)
-    disease_status = Column(Enum("DISEASED", "HEALTHY"), nullable=False)
+    disease_status = Column(Enum("DISEASED", "HEALTHY", "NO PLANT"), nullable=False)
     image_url = Column(String(255), nullable=False)
     image_key = Column(String(255), nullable=False)
     severity = Column(Integer, nullable=True)

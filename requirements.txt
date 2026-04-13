@@ -6,7 +6,7 @@ cryptography
 python-dotenv
 oci
 paho-mqtt
-google-generativeai
+google-genai
 python-multipart
 python-jose[cryptography]
 passlib[bcrypt]
