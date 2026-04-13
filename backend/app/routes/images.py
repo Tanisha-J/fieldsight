@@ -2,17 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
-<<<<<<< HEAD
 from app.services.image_analysis_service import analyze_image
-from app.services.oci_service import upload_to_oci
-
-
-router = APIRouter()
-
-@router.get("/scans/{session_id}")
-def get_scans(session_id: int, db: Session = Depends(get_db)):
-    scans = db.query(Scan).filter(Scan.session_id == session_id).all()
-=======
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 from app.services.image_analysis_service import analyze_image
@@ -20,10 +10,9 @@ import base64
 
 router = APIRouter()
 
-@router.get ("/scans/{session_id}")
-def get_scans (session_id: int ,db: Session = Depends (get_db)):
-    scans=db.query(Scan).filter(Scan.session_id== session_id).all()
->>>>>>> origin/feature/backend-setup
+@router.get("/scans/{session_id}")
+def get_scans(session_id: int, db: Session = Depends(get_db)):
+    scans = db.query(Scan).filter(Scan.session_id == session_id).all()
     if not scans:
         raise HTTPException(status_code=404, detail="No scans found for this session")
     return scans
@@ -42,11 +31,8 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"All scans deleted for session {session_id}"}
 
-<<<<<<< HEAD
-@router.post("/scan/upload")
-=======
+
 @router.post("/scans/upload")
->>>>>>> origin/feature/backend-setup
 async def upload_scan(
     session_id: int = Form(...),
     farmer_id: int = Form(...),
@@ -56,12 +42,6 @@ async def upload_scan(
     db: Session = Depends(get_db)
 ):
     image_bytes = await image.read()
-<<<<<<< HEAD
-    result = await analyze_image(image_bytes)
-    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
-        return {"status": "discarded", "disease_status": result["disease_status"]}
-    image_url, image_key = upload_to_oci(image_bytes, image.filename)
-=======
     #1. send to gemini
     result = await analyze_image(image_bytes)
     #2. if healthy
@@ -70,14 +50,11 @@ async def upload_scan(
     #3. upload to oci
     image_key = upload_to_oci(image_bytes, image.filename)
     #4. save to db
->>>>>>> origin/feature/backend-setup
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
-<<<<<<< HEAD
-=======
         image_key=image_key,
         gemini_status="completed",
         gps_lat=gps_lat,
@@ -112,7 +89,6 @@ async def upload_scan(
         disease_status=result["disease_status"],
         severity=result["severity"],
         symptoms_observed=result["symptoms_observed"],
->>>>>>> origin/feature/backend-setup
         image_url=image_url,
         image_key=image_key,
         gemini_status="completed",
@@ -122,9 +98,6 @@ async def upload_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
-<<<<<<< HEAD
-    return {"status": "stored", "scan_id": scan.scan_id}
-=======
     return {"status": "stored", 
             "scan_id": scan.scan_id,
             "image_url": image_url,
@@ -132,4 +105,3 @@ async def upload_scan(
             "severity": result["severity"],
             "short_explanation": result.get("short_explanation")
             }
->>>>>>> origin/feature/backend-setup

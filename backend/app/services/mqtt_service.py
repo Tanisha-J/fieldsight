@@ -1,17 +1,9 @@
 import json
 import os
 from datetime import datetime, timezone 
-<<<<<<< HEAD
 
 
 import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
-from app.db import SessionLocal
-from app.services.telemery_service import store_telemetry
-
-
-=======
-import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
->>>>>>> origin/feature/backend-setup
 from app.db import SessionLocal
 from app.services.telemetry_service import store_telemetry
 
@@ -21,8 +13,10 @@ MQTT_HOST = os.getenv("MQTT_HOST", "127.0.0.1")
 # getting port from environment variables
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 
+
 # what the rover publishes telemetry to 
 MQTT_TELEMETRY_TOPIC = os.getenv("MQTT_TELEMETRY_TOPIC", "rover/telemetry")
+
 
 # what the backend publishes commands to 
 MQTT_CMD_TOPIC = os.getenv("MQTT_CMD_TOPIC", "rover/cmd")

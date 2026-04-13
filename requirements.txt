@@ -4,13 +4,9 @@ sqlalchemy
 pymysql
 cryptography
 python-dotenv
-<<<<<<< HEAD
-paho-mqtt
-python-jose[cryptography]
-passlib[bcrypt]
-=======
 oci
 paho-mqtt
 google-generativeai
 python-multipart
->>>>>>> origin/feature/backend-setup
+python-jose[cryptography]
+passlib[bcrypt]
