@@ -22,10 +22,11 @@ def store_telemetry(
         text(
             """
             INSERT INTO Telemetry (session_id, rover_id, battery, gps_lat, gps_lng, heading, captured_at)
-            VALUES (:rover_id, :battery, :gps_lat, :gps_lng, :heading, :captured_at)
+            VALUES (:session_id, :rover_id, :battery, :gps_lat, :gps_lng, :heading, :captured_at)
             """
         ),
         {
+            "session_id": session_id,
             "rover_id": rover_id,
             "battery": battery,
             "gps_lat": gps_lat,

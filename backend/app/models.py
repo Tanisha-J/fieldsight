@@ -43,6 +43,8 @@ class Scan(Base):
     scanned_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
     gps_lat = Column(Double, nullable=False)
     gps_lng = Column(Double, nullable=False)
+    short_explanation = Column(String(500), nullable=True)
+    confidence_score = Column(Integer, nullable=True)
 
 
 class Telemetry(Base):

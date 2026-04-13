@@ -32,11 +32,13 @@ CREATE TABLE IF NOT EXISTS Scans (
     disease_status ENUM('DISEASED', 'HEALTHY', 'NO PLANT') NOT NULL,
     image_url VARCHAR(255) NOT NULL,
     image_key VARCHAR(255) NOT NULL,
-    severity ENUM('YELLOW', 'RED', 'ORANGE') NOT NULL,
+    severity INT NULL,
     gemini_status VARCHAR(20),
     scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     gps_lat DOUBLE NOT NULL,
     gps_lng DOUBLE NOT NULL,
+    short_explanation VARCHAR(500) NULL,
+    confidence_score INT NULL,
 
     -- Establishing the relationships
     FOREIGN KEY (session_id) REFERENCES Rover_Sessions(session_id),

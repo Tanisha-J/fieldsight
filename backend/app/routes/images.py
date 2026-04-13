@@ -5,7 +5,6 @@ from app.models import Scan
 from app.services.image_analysis_service import analyze_image
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
-from app.services.image_analysis_service import analyze_image
 import base64
 
 router = APIRouter()
@@ -45,7 +44,7 @@ async def upload_scan(
     #1. send to gemini
     result = await analyze_image(image_bytes)
     #2. if healthy
-    if result["disease_status"] in ("HEALTHY"):
+    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
     #3. upload to oci
     image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
@@ -60,6 +59,8 @@ async def upload_scan(
         gemini_status="completed",
         gps_lat=gps_lat,
         gps_lng=gps_lng,
+        short_explanation=result.get("short_explanation"),
+        confidence_score=result.get("confidence_score"),
     )
     db.add(scan)
     db.commit()
@@ -72,6 +73,7 @@ async def upload_scan(
         "disease_status": result["disease_status"],
         "severity": result["severity"],
         "short_explanation": result.get("short_explanation"),
+        "confidence_score": result.get("confidence_score"),
     }
 
 @router.post("/scans/upload-base64")
@@ -81,6 +83,7 @@ async def upload_scan_base64(
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
     image_base64: str = Form(...),
+    filename: str = Form("scan.jpg"),
     db: Session = Depends(get_db)
 ):
     image_bytes = base64.b64decode(image_base64)
@@ -89,14 +92,15 @@ async def upload_scan_base64(
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
 
-    image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
+    image_url, image_key = upload_to_oci(image_bytes, filename)
 
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
-        symptoms_observed=result["symptoms_observed"],
+        short_explanation=result.get("short_explanation"),
+        confidence_score=result.get("confidence_score"),
         image_url=image_url,
         image_key=image_key,
         gemini_status="completed",
@@ -109,7 +113,8 @@ async def upload_scan_base64(
     return {"status": "stored", 
             "scan_id": scan.scan_id,
             "image_url": image_url,
-            "disease_status":result ["disease_status"],
+            "disease_status":result["disease_status"],
             "severity": result["severity"],
-            "short_explanation": result.get("short_explanation")
+            "short_explanation": result.get("short_explanation"),
+            "confidence_score": result.get("confidence_score"),
             }
