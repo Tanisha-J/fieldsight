@@ -4,7 +4,6 @@ sqlalchemy
 pymysql
 cryptography
 python-dotenv
-oci
 paho-mqtt
-google-generativeai
-python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
