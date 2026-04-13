@@ -80,8 +80,8 @@ def upload_to_oci(image_bytes: bytes, filename: str) -> tuple[str, str]:
         content_type="image/jpeg",
     )
 
-    image_url = build_read_url(object_name)
-    return image_url, object_name  
+    url = f"https://objectstorage.{OCI_REGION}.oraclecloud.com/n/{namespace}/b/{OCI_BUCKET_NAME}/o/{object_name}"
+    return url, object_name      
 
 
 def delete_from_oci(object_name: str) -> None:

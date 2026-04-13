@@ -8,10 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import rover, images, health, telemetry
 from app.services.mqtt_service import start_mqtt_client
 
-app= FastAPI( title= "FieldSight API")
 
 
-#frontend (react) to talk to backend
+#frontend (react) to talk to backenda
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,7 +22,7 @@ app= FastAPI(title = "FieldSight API", lifespan= lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React runs on this port
+    #allow_origins=["http://localhost:5173"],  # React runs on this port
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
