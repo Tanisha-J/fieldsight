@@ -222,20 +222,20 @@ class MotorController:
         Left wheels go backward, right wheels go forward.
         Use this for sharp 90 degree turns between crop rows.
         """
-        self.m1.backward(config.CRUISE_PWM)  # front-left  backward
-        self.m2.backward(config.CRUISE_PWM)  # rear-left   backward
-        self.m3.forward(config.CRUISE_PWM)   # front-right forward
-        self.m4.forward(config.CRUISE_PWM)   # rear-right  forward
+        self.m1.backward(config.MAX_PWM)  # front-left  backward
+        self.m2.backward(config.MAX_PWM)  # rear-left   backward
+        self.m3.forward(config.MAX_PWM)   # front-right forward
+        self.m4.forward(config.MAX_PWM)   # rear-right  forward
 
     def pivot_right(self):
         """
         Spins the rover in place to the right.
         Right wheels go backward, left wheels go forward.
         """
-        self.m1.forward(config.CRUISE_PWM)   # front-left  forward
-        self.m2.forward(config.CRUISE_PWM)   # rear-left   forward
-        self.m3.backward(config.CRUISE_PWM)  # front-right backward
-        self.m4.backward(config.CRUISE_PWM)  # rear-right  backward
+        self.m1.forward(config.MAX_PWM)   # front-left  forward
+        self.m2.forward(config.MAX_PWM)   # rear-left   forward
+        self.m3.backward(config.MAX_PWM)  # front-right backward
+        self.m4.backward(config.MAX_PWM)  # rear-right  backward
 
     def set_speeds(self, left_speed, right_speed):
         """
