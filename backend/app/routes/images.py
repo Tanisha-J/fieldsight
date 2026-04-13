@@ -5,6 +5,7 @@ from app.models import Scan
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 from app.services.image_analysis_service import analyze_image
+import base64
 
 router = APIRouter()
 
@@ -29,7 +30,7 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"All scans deleted for session {session_id}"}
 
-@router.post("/scan/upload")
+@router.post("/scans/upload")
 async def upload_scan(
     session_id: int = Form(...),
     farmer_id: int = Form(...),
@@ -41,8 +42,8 @@ async def upload_scan(
     image_bytes = await image.read()
     #1. send to gemini
     result = await analyze_image(image_bytes)
-    #2. if healthy/ no plant
-    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
+    #2. if healthy
+    if result["disease_status"] in ("HEALTHY"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
     #3. upload to oci
     image_key = upload_to_oci(image_bytes, image.filename)
@@ -69,16 +70,17 @@ async def upload_scan(
     farmer_id: int = Form(...),
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
-    image: UploadFile = File(...),
+    image_base64: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    image_bytes = await image.read()
+    image_bytes = base64.b64decode(image_base64)
     result = await analyze_image(image_bytes)
-    if result["disease_status"] in ("HEALTHY", "NO PLANT"):
+
+    if result["disease_status"] == "HEALTHY":
         return {"status": "discarded", "disease_status": result["disease_status"]}
-    
-    image_url, image_key = upload_to_oci(image_bytes, image.filename)
-    
+
+    image_url, image_key = upload_to_oci(image_bytes, "scan.jpg")
+
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
@@ -94,4 +96,10 @@ async def upload_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
-    return {"status": "stored", "scan_id": scan.scan_id, "image_url": image_url}
+    return {"status": "stored", 
+            "scan_id": scan.scan_id,
+            "image_url": image_url,
+            "disease_status":result ["disease_status"],
+            "severity": result["severity"],
+            "short_explanation": result.get("short_explanation")
+            }
