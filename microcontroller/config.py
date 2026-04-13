@@ -159,8 +159,8 @@ WHEEL_CIRCUMFERENCE_FT = 1.833 # feet    (π × 0.583)
 # BACKEND — FastAPI on Oracle Cloud
 # Fill in BACKEND_URL and MQTT_BROKER_URL once deployed.
 # ─────────────────────────────────────────────
-BACKEND_URL     = ""           # e.g. "https://your-oracle-ip/api"
-MQTT_BROKER_URL = ""           # e.g. "your-oracle-ip"
+BACKEND_URL     = "http://64.181.240.74:8000"
+MQTT_BROKER_URL = "64.181.240.74"
 MQTT_PORT       = 1883         # standard unencrypted MQTT port
                                # use 8883 if TLS is enabled on the broker
 MQTT_KEEPALIVE  = 60           # seconds between MQTT heartbeat pings
