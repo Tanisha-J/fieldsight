@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime, timezone 
+<<<<<<< HEAD
 
 
 import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
@@ -8,8 +9,10 @@ from app.db import SessionLocal
 from app.services.telemery_service import store_telemetry
 
 
+=======
+import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
+>>>>>>> origin/feature/backend-setup
 from app.db import SessionLocal
-
 from app.services.telemetry_service import store_telemetry
 
 # getting host from environment variables 
@@ -114,13 +117,13 @@ def start_mqtt_client() -> mqtt.Client:
     _client = client
     return client
 
-
-def publish_command(command: str, rover_id: int, value: str | None = None) -> dict:
+def publish_command(command: str, rover_id: int, session_id: int = None, value: str | None = None) -> dict:
     client = start_mqtt_client()
 
     payload = {
         "command": command,
         "rover_id": rover_id,
+        "session_id": session_id,
         "value": value,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
