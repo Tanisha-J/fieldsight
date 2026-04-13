@@ -12,20 +12,20 @@ use it like this:
 # GPIO PINS — LEFT MOTOR DRIVER (L298N U4)
 # Controls Motor 1 (front-left) and Motor 2 (rear-left)
 
-MOTOR_LEFT_IN1 = 6      # GPIO17 → IN1  (Motor 1 direction)
-MOTOR_LEFT_IN2 = 5      # GPIO27 → IN2  (Motor 1 direction)
-MOTOR_LEFT_IN3 = 20      # GPIO22 → IN3  (Motor 2 direction)
-MOTOR_LEFT_IN4 = 16      # GPIO23 → IN4  (Motor 2 direction)
+MOTOR_LEFT_IN1 = 5      # GPIO17 → IN1  (Motor 1 direction)
+MOTOR_LEFT_IN2 = 6      # GPIO27 → IN2  (Motor 1 direction)
+MOTOR_LEFT_IN3 = 16      # GPIO22 → IN3  (Motor 2 direction)
+MOTOR_LEFT_IN4 = 20      # GPIO23 → IN4  (Motor 2 direction)
 MOTOR_LEFT_ENA = 12      # GPIO18 (PWM0) → ENA  (Motor 1 speed)
 MOTOR_LEFT_ENB = 19      # GPIO13 (PWM1) → ENB  (Motor 2 speed)
 
 # GPIO PINS — RIGHT MOTOR DRIVER (L298N U1)
 # Controls Motor 3 (front-right) and Motor 4 (rear-right)
 
-MOTOR_RIGHT_IN1 = 17      # GPIO5  → IN1  (Motor 3 direction)
-MOTOR_RIGHT_IN2 = 27      # GPIO6  → IN2  (Motor 3 direction)
-MOTOR_RIGHT_IN3 = 22     # GPIO16 → IN3  (Motor 4 direction)
-MOTOR_RIGHT_IN4 = 23     # GPIO20 → IN4  (Motor 4 direction)
+MOTOR_RIGHT_IN1 = 27      # GPIO5  → IN1  (Motor 3 direction)
+MOTOR_RIGHT_IN2 = 17      # GPIO6  → IN2  (Motor 3 direction)
+MOTOR_RIGHT_IN3 = 23     # GPIO16 → IN3  (Motor 4 direction)
+MOTOR_RIGHT_IN4 = 22     # GPIO20 → IN4  (Motor 4 direction)
 MOTOR_RIGHT_ENA = 18     # GPIO12 (PWM0) → ENA  (Motor 3 speed)
 MOTOR_RIGHT_ENB = 13     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 
@@ -40,7 +40,7 @@ MOTOR_RIGHT_ENB = 13     # GPIO19 (PWM1) → ENB  (Motor 4 speed)
 CRUISE_PWM      = 0.45   # straight line driving
 TURN_INNER_PWM  = 0.0   # inside wheels during a curve
 TURN_OUTER_PWM  = 0.45   # outside wheels during a curve
-MAX_PWM         = 0.60   # max
+MAX_PWM         = 0.80   # max
 
 # step up by RAMP_STEP every RAMP_DELAY_SEC to reduce current spikes.
 RAMP_STEP       = 0.05   # PWM increment per step
