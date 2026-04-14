@@ -52,5 +52,11 @@ Return raw JSON only, no markdown, no extra text:
             ])
         ]
     )
-    result = json.loads(response.text.strip())
-    return result
+    text = (response.text or "").strip()
+    if not text:
+        raise RuntimeError("Gemini returned empty response")
+
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Gemini returned non-JSON response: {text[:300]}")  

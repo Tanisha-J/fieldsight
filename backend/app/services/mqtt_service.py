@@ -7,6 +7,12 @@ import paho.mqtt.client as mqtt # lets code connect to broker, and establish sub
 from app.db import SessionLocal
 from app.services.telemetry_service import store_telemetry
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
 # getting host from environment variables 
 MQTT_HOST = os.getenv("MQTT_HOST", "127.0.0.1")
 
