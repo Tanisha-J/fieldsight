@@ -14,7 +14,7 @@ async def analyze_image(image_bytes: bytes) -> dict:
     client = _get_genai_client()
         
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=[
             types.Content(parts=[
                 types.Part(inline_data=types.Blob(mime_type="image/jpeg", data=image_bytes)),
