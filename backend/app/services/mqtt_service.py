@@ -103,7 +103,7 @@ def _configure_auth_and_tls(client: mqtt.Client) -> None:
             keyfile=MQTT_CLIENT_KEY or None,
             tls_version=ssl.PROTOCOL_TLS_CLIENT,
         )
-        client.tls_insecure_set(false)
+        client.tls_insecure_set(False)
 
 def start_mqtt_client() -> mqtt.Client:
     global _client
