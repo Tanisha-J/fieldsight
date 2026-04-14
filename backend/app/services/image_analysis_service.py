@@ -65,9 +65,25 @@ Return raw JSON only, no markdown, no extra text:
     )
     text = (response.text or "").strip()
     if not text:
-        raise RuntimeError("Gemini returned empty response")
+        return {
+            "disease_status": "HEALTHY",
+            "severity": 0,
+            "confidence_score": 0,
+            "short_explanation": "Analysis unavailable (empty model response)."
+        }
 
     try:
         result = json.loads(text)
     except json.JSONDecodeError:
-        raise RuntimeError(f"Gemini returned non-JSON response: {text[:300]}")  
+        return {
+            "disease_status": "HEALTHY",
+            "severity": 0,
+            "confidence_score": 0,
+            "short_explanation": "Analysis unavailable (non-JSON model response)."
+        }
+    result["disease_status"] = str(result.get("disease_status", "HEALTHY")).upper()
+    result["severity"] = int(result.get("severity", 0))
+    result["confidence_score"] = int(result.get("confidence_score", 0))
+    result["short_explanation"] = str(result.get("short_explanation", "")).strip()
+
+    return result

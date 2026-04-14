@@ -22,14 +22,21 @@ def start(farmer_id: int, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(session)
 
-        publish_command(command="start", 
-                        rover_id=1, 
-                        session_id=session.session_id
-                        )
+        mqtt_warning = None
+        try:
+            publish_command(
+                command="start",
+                rover_id=rover_id,
+                session_id=session.session_id
+            )
+        except Exception as mqtt_err:
+            mqtt_warning = str(mqtt_err)
 
         return {"session_id": session.session_id, 
                 "rover_id":1,
-                "status": "Running"}
+                "status": "Running",
+                "mqtt_warning": mqtt_warning
+                }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start rover: {e}")
     

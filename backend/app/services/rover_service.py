@@ -15,7 +15,7 @@ def start_rover(db: Session, session_id: int) -> dict:
     session.active_command = "start"
     db.commit()
 
-    publish_command(command="start", rover_id=1)
+    publish_command(command="start", rover_id=1, session_id=session.session_id)
 
     return {"message": f"Rover started for session {session_id}", "status": "Running"}
 
@@ -32,8 +32,6 @@ def stop_rover(db: Session, session_id: int) -> dict:
     db.commit()
     db.refresh(session)
 
-    publish_command(command="stop", 
-                    rover_id=1,
-                    session_id=session.session_id)
+    publish_command(command="stop", rover_id=1, session_id=session.session_id)
 
     return {"message": f"Rover stopped for session {session_id}", "status": "Stopped"}
