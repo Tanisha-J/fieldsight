@@ -104,7 +104,7 @@ ROVER_CRUISE_FPS     = 0.41    # feet per second at cruise (0.28 mph × 1.467)
 # Field dimensions — confirmed for demo
 ROW_LENGTH_IN        = 100.0   # inches — length of each crop row
 ROW_LENGTH_FT        = ROW_LENGTH_IN / 12.0   # = 8.33 feet
-ROW_SPACING_IN       = 98.0    # inches — distance to travel sideways between rows
+ROW_SPACING_IN       = 48.0    # inches — distance to travel sideways between rows
 ROW_SPACING_FT       = ROW_SPACING_IN / 12.0  # = 8.17 feet
 NUM_ROWS             = 2       # number of rows to scan
 TURN_ANGLE_DEGREES   = 90      # degrees to turn at end of each row
@@ -164,8 +164,7 @@ MQTT_BROKER_URL = "64.181.240.74"
 MQTT_PORT       = 1883         # standard unencrypted MQTT port
                                # use 8883 if TLS is enabled on the broker
 MQTT_KEEPALIVE  = 60           # seconds between MQTT heartbeat pings
-MQTT_USERNAME = "fieldsight_rover"
-MQTT_PASSWORD = "roverpass"
+
 
 # MQTT topics — {session_id} is replaced at runtime by backend_client.py
 MQTT_CMD_TOPIC        = "rover/cmd"        # backend → rover  (start / stop commands)
