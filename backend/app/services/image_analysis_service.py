@@ -71,15 +71,17 @@ Return raw JSON only, no markdown, no extra text:
             "confidence_score": 0,
             "short_explanation": "Analysis unavailable (empty model response)."
         }
+    
+    text = text.replace("```json", "").replace("```", "").strip()
 
     try:
         result = json.loads(text)
-    except json.JSONDecodeError:
+    except Exception:
         return {
             "disease_status": "HEALTHY",
             "severity": 0,
             "confidence_score": 0,
-            "short_explanation": "Analysis unavailable (non-JSON model response)."
+            "short_explanation": "Invalid JSON response from model"
         }
     result["disease_status"] = str(result.get("disease_status", "HEALTHY")).upper()
     result["severity"] = int(result.get("severity", 0))
