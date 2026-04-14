@@ -1,10 +1,14 @@
 from datetime import date, datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from app.auth import Farmer, RoverSession,Scan
+
+from app.auth import hash_password, verify_password, create_access_token
+from app.db import get_db
+from app.models import Farmer, RoverSession, Scan
 from app.services.mqtt_service import publish_command
-from app.service.rover_service import stop_rover, start_rover
+from app.services.rover_service import stop_rover, start_rover
 from app.services.telemetry_service import get_latest_telemetry
 
 router = APIRouter(prefix="/api", tags=["compat"])
@@ -29,7 +33,7 @@ def compat_signup(payload:SignupRequest, db: Session = Depends(get_db)):
         first_name=payload.first_name,
         last_name=payload.last_name,
         username=payload.username,
-        password=hash_password(payload.password),
+        password_hash=hash_password(payload.password),
         farm_name=payload.farm_name
     )
     db.add(user)
@@ -45,7 +49,7 @@ def compat_signup(payload:SignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post ("/auth/login")
-def compat_login(payload: Loginrequest, db: Session = Depends(get_db)):
+def compat_login(payload: LoginRequest, db: Session = Depends(get_db)):
     user=db.query(Farmer).filter(Farmer.username == payload.username).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -70,7 +74,7 @@ def compat_logout():
     return {"message": "Logout successful"}
 
 @router.get ("/user/profile")
-def compact_user_profile(farmer_id: int, db: Session = Depends(get_db)):
+def compat_user_profile(farmer_id: int, db: Session = Depends(get_db)):
     user = db.query(Farmer).filter(Farmer.farmer_id == farmer_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
