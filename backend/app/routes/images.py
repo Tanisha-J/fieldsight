@@ -5,6 +5,7 @@ from app.models import Scan
 from app.services.image_analysis_service import analyze_image
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
+from google.genai.errors import ServerError
 import base64
 import binascii
 
@@ -43,7 +44,14 @@ async def upload_scan(
 ):
     image_bytes = await image.read()
     #1. send to gemini
-    result = await analyze_image(image_bytes)
+    try:
+        result = await analyze_image(image_bytes)
+    except ServerError:
+        raise HTTPException(
+            status_code=503,
+            detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
+
     #2. if healthy
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
@@ -92,7 +100,13 @@ async def upload_scan_base64(
     except (binascii.Error, ValueError):
         raise HTTPException(status_code=400, detail="Invalid base64 image payload")
     
-    result = await analyze_image(image_bytes)
+    try:
+        result = await analyze_image(image_bytes)
+    except ServerError:
+        raise HTTPException(
+            status_code=503,
+            detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
 
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
