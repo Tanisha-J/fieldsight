@@ -21,6 +21,7 @@ class RoverSession(Base):
 
     session_id = Column(Integer, primary_key=True, autoincrement=True)
     farmer_id = Column(Integer, ForeignKey("Farmers.farmer_id"), nullable=False)
+    rover_id= Column(Integer, nullable=False, default =1)
     session_date = Column(DATE, nullable=False)
     started_at = Column(TIMESTAMP, nullable=True)
     stopped_at = Column(TIMESTAMP, nullable=True)
