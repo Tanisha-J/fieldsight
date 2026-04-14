@@ -164,11 +164,11 @@ class MotorController:
     # These are the methods state_machine.py calls
     # ─────────────────────────────────────────────
 
-def forward(self, speed=config.CRUISE_PWM):
-    self.m1.forward(0.44)  # front-left
-    self.m2.forward(0.44)  # rear-left
-    self.m3.forward(0.45)  # front-right
-    self.m4.forward(0.45)  # rear-right
+    def forward(self, speed=config.CRUISE_PWM):
+        self.m1.forward(0.44)  # front-left
+        self.m2.forward(0.44)  # rear-left
+        self.m3.forward(0.45)  # front-right
+        self.m4.forward(0.45)  # rear-right
 
     def backward(self, speed=config.CRUISE_PWM):
         """
