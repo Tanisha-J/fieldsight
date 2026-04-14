@@ -164,11 +164,13 @@ MQTT_BROKER_URL = "64.181.240.74"
 MQTT_PORT       = 1883         # standard unencrypted MQTT port
                                # use 8883 if TLS is enabled on the broker
 MQTT_KEEPALIVE  = 60           # seconds between MQTT heartbeat pings
+MQTT_USERNAME = "fieldsight_rover"
+MQTT_PASSWORD = "roverpass"
 
 # MQTT topics — {session_id} is replaced at runtime by backend_client.py
-MQTT_CMD_TOPIC        = "rover/{session_id}/cmd"        # backend → rover  (start / stop commands)
+MQTT_CMD_TOPIC        = "rover/cmd"        # backend → rover  (start / stop commands)
 MQTT_STATUS_TOPIC     = "rover/{session_id}/status"     # rover  → backend (running / stopped)
-MQTT_TELEMETRY_TOPIC  = "rover/{session_id}/telemetry"  # rover  → backend (battery, gps, heading, timestamp)
+MQTT_TELEMETRY_TOPIC  = "rover/telemetry"  # rover  → backend (battery, gps, heading, timestamp)
 MQTT_SCAN_TOPIC       = "scans/new"                     # rover  → backend (new scan result)
 
 # How often the rover publishes a telemetry update while running
@@ -179,7 +181,7 @@ TELEMETRY_INTERVAL_SEC = 2.0   # seconds between telemetry publishes
 # Rover calls these directly (HTTP POST) for image analysis.
 # Base URL comes from BACKEND_URL above.
 # ─────────────────────────────────────────────
-ENDPOINT_ANALYZE  = "/images/analyze"   # POST — sends image + GPS coords + session metadata
+ENDPOINT_ANALYZE  = "/scans/upload-base64"   # POST — sends image + GPS coords + session metadata
                                         #        returns: is_diseased, severity, cause, etc.
 
 # ─────────────────────────────────────────────
