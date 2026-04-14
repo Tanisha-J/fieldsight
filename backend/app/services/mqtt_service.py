@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime, timezone 
+import ssl 
 
 
 import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
@@ -19,7 +20,7 @@ MQTT_ENABLED = _env_bool("MQTT_ENABLED", True)
 MQTT_HOST = os.getenv("MQTT_HOST", "127.0.0.1")
 
 # getting port from environment variables
-MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_PORT = int(os.getenv("MQTT_PORT", "8883"))
 
 
 # what the rover publishes telemetry to 
@@ -100,8 +101,9 @@ def _configure_auth_and_tls(client: mqtt.Client) -> None:
             ca_certs=MQTT_CA_CERT,
             certfile=MQTT_CLIENT_CERT or None,
             keyfile=MQTT_CLIENT_KEY or None,
+            tls_version=ssl.PROTOCOL_TLS_CLIENT,
         )
-        client.tls_insecure_set(MQTT_TLS_INSECURE)
+        client.tls_insecure_set(false)
 
 def start_mqtt_client() -> mqtt.Client:
     global _client
