@@ -13,6 +13,7 @@ def start(farmer_id: int, db: Session = Depends(get_db)):
     try:
         session = RoverSession(
             farmer_id=farmer_id,
+            rover_id=1,
             session_date=date.today(),
             status="Running",
             active_command="start"
@@ -21,9 +22,14 @@ def start(farmer_id: int, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(session)
 
-        publish_command(command="start", rover_id=session.session_id, session_id=session.session_id)
+        publish_command(command="start", 
+                        rover_id=1, 
+                        session_id=session.session_id
+                        )
 
-        return {"session_id": session.session_id, "status": "Running"}
+        return {"session_id": session.session_id, 
+                "rover_id":1,
+                "status": "Running"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start rover: {e}")
     
