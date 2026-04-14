@@ -15,7 +15,7 @@ class RegisterRequest(BaseModel):
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
     username: str = Field(min_length=3, max_length=20)
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=8, max_length=72)
     farm_name: str = Field(min_length=1, max_length=50)
 
 
@@ -35,11 +35,17 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Username already exists")
 
+    try:
+        pw_hash = hash_password(payload.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    
     user = Farmer(
         first_name=payload.first_name,
         last_name=payload.last_name,
         username=payload.username,
-        password_hash=hash_password(payload.password),
+        password_hash=pw_hash,
         farm_name=payload.farm_name,
     )
     db.add(user)

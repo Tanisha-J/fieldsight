@@ -14,7 +14,7 @@ async def analyze_image(image_bytes: bytes) -> dict:
     client = _get_genai_client()
         
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=[
             types.Content(parts=[
                 types.Part(inline_data=types.Blob(mime_type="image/jpeg", data=image_bytes)),
@@ -52,5 +52,11 @@ Return raw JSON only, no markdown, no extra text:
             ])
         ]
     )
-    result = json.loads(response.text.strip())
-    return result
+    text = (response.text or "").strip()
+    if not text:
+        raise RuntimeError("Gemini returned empty response")
+
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Gemini returned non-JSON response: {text[:300]}")  
