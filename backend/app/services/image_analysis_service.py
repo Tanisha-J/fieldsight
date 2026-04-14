@@ -21,20 +21,31 @@ async def analyze_image(image_bytes: bytes) -> dict:
                 types.Part(text="""
 You are a plant health visual assessment assistant. Analyze the provided plant image using only visible evidence.
 
-Evaluate visible indicators:
-- Leaf discoloration (yellowing, browning, blackening)
-- Spotting patterns (circular lesions, irregular spots)
-- Edge burn or necrosis
-- Wilting or drooping
-- Mold or powdery coatings
-- Leaf curling or deformation
-- Stem damage
-- Pest-like chewing or mining damage
 
+Evaluate these visible indicators:
+- Yellowing: yellow discoloration on leaves
+- Browning: brown discoloration on leaves
+- Brown spots: discrete brown spots or lesions
+- Blackening: dark black areas on leaves or stem
+- Pale color: unusually light or washed out leaf color
+- Circular lesions: round, defined spots indicating fungal patterns
+- Irregular spots: uneven, spreading spots
+- Edge burn: browning or necrosis along leaf edges
+- Wilting: drooping or limp leaves/stems
+- Leaf curl: leaves curling inward or outward
+- Mold: visible mold or mildew growth
+- Powdery coating: white or grey powdery substance on leaves
+- Stem damage: visible cracks, discoloration, or rot on stem
+- Pest damage: chewing marks, holes, or mining trails
+- Dry tissue: dry, brittle, or crispy leaf texture
+- Patchy chlorophyll loss: uneven green loss across leaf surface
+                           
 Severity rules:
-- 0 = healthy, no visible symptoms
-- 3 = moderate, clear damage, spreading
-- 6 = severe, large portions affected, major decline
+- 0 = HEALTHY: none of the above indicators are visible
+- 1 = MILD: 1-2 indicators visible, affecting less than 25% of visible plant area
+- 2 = MODERATE: 2-4 indicators visible, affecting 25-60% of visible plant area
+- 3 = SEVERE: 4+ indicators visible, or any indicator affecting more than 60% of visible plant area
+- severity must be 0 if disease_status is HEALTHY
 
 Rules:
 - Report only visually supported findings
@@ -44,7 +55,7 @@ Rules:
 Return raw JSON only, no markdown, no extra text:
 {
     "disease_status": "DISEASED" or "HEALTHY",
-    "severity": 0 or 3 or 6,
+    "severity":  0, 1, 2, or 3,
     "confidence_score": 0 to 100,
     "short_explanation": "brief visual explanation of what you see"
 }
