@@ -139,7 +139,7 @@ DRIVE_ROW_SPACING_SEC = 7.4
 # Time to pivot 90 degrees in place
 # TUNE THIS — run motors.pivot_left() and time how long a 90 degree turn takes
 # on your actual surface (soil/tanbark). Adjust until turns are accurate.
-PIVOT_90_SEC         = 3.5     # seconds — NEEDS TUNING on real surface
+PIVOT_90_SEC         = 4.0     # seconds — NEEDS TUNING on real surface
  
 # Max seconds to wait for Gemini image analysis to complete
 # If analysis takes longer than this, rover moves on anyway
