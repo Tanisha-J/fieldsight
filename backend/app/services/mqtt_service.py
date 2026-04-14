@@ -13,6 +13,8 @@ def _env_bool(name: str, default: bool = False) -> bool:
         return default
     return value.strip().lower() in ("1", "true", "yes", "on")
 
+MQTT_ENABLED = _env_bool("MQTT_ENABLED", True)
+
 # getting host from environment variables 
 MQTT_HOST = os.getenv("MQTT_HOST", "127.0.0.1")
 
