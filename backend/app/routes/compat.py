@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.auth import Farmer, RoverSession,Scan
-from app.services.mqtt_servixe import publish_command
+from app.services.mqtt_service import publish_command
 from app.service.rover_service import stop_rover, start_rover
 from app.services.telemetry_service import get_latest_telemetry
 
