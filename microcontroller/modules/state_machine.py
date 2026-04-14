@@ -270,7 +270,7 @@ class StateMachine:
 
         # First 90 degree turn
         log.info("  Pivoting right 90°...")
-        self.motors.pivot_right()
+        self.motors.pivot_left()
         time.sleep(config.PIVOT_90_SEC)
         self.motors.stop()
         time.sleep(0.5)
@@ -286,7 +286,7 @@ class StateMachine:
         # Second 90 degree turn — now facing down next row
         log.info("  Pivoting right 90°...")
         self.state = State.TURNING
-        self.motors.pivot_right()
+        self.motors.pivot_left()
         time.sleep(config.PIVOT_90_SEC)
         self.motors.stop()
         time.sleep(0.5)
