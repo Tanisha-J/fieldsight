@@ -130,16 +130,16 @@ DRIVE_BETWEEN_CAPTURES_SEC = CAPTURE_EVERY_FT / ROVER_CRUISE_FPS
 
 # Time to drive one full row
 # Formula: ROW_LENGTH_FT / ROVER_CRUISE_FPS = 75.0 / 0.41 = ~183 seconds
-DRIVE_ROW_SEC = ROW_LENGTH_FT / ROVER_CRUISE_FPS
+DRIVE_ROW_SEC = 15.4
 
 # Time to drive between rows (row spacing)
 # Formula: ROW_SPACING_FT / ROVER_CRUISE_FPS = 3.0 / 0.41 = ~7.3 seconds
-DRIVE_ROW_SPACING_SEC = ROW_SPACING_FT / ROVER_CRUISE_FPS
+DRIVE_ROW_SPACING_SEC = 7.4
 
 # Time to pivot 90 degrees in place
 # TUNE THIS — run motors.pivot_left() and time how long a 90 degree turn takes
 # on your actual surface (soil/tanbark). Adjust until turns are accurate.
-PIVOT_90_SEC         = 2.5     # seconds — NEEDS TUNING on real surface
+PIVOT_90_SEC         = 3.0     # seconds — NEEDS TUNING on real surface
  
 # Max seconds to wait for Gemini image analysis to complete
 # If analysis takes longer than this, rover moves on anyway
