@@ -3,9 +3,16 @@ import json
 import google.genai as genai
 from google.genai import types
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+def _get_genai_client() -> genai.Client:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing GEMINI_API_KEY")
+    return genai.Client(api_key=api_key)
 
 async def analyze_image(image_bytes: bytes) -> dict:
+    
+    client = _get_genai_client()
+        
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[

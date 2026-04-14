@@ -6,6 +6,7 @@ from app.services.image_analysis_service import analyze_image
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 import base64
+import binascii
 
 router = APIRouter()
 
@@ -86,7 +87,11 @@ async def upload_scan_base64(
     filename: str = Form("scan.jpg"),
     db: Session = Depends(get_db)
 ):
-    image_bytes = base64.b64decode(image_base64)
+    try:
+        image_bytes = base64.b64decode(image_base64, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid base64 image payload")
+    
     result = await analyze_image(image_bytes)
 
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):

@@ -20,13 +20,15 @@ async def lifespan(app: FastAPI):
 
 app= FastAPI(title = "FieldSight API", lifespan= lifespan)
 
+raw_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+cors_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    #allow_origins=["http://localhost:5173"],  # React runs on this port
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_origins=["*"]
 )
 
 #register all routes
