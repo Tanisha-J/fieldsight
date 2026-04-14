@@ -26,7 +26,7 @@ def start(farmer_id: int, db: Session = Depends(get_db)):
         try:
             publish_command(
                 command="start",
-                rover_id=rover_id,
+                rover_id=1,
                 session_id=session.session_id
             )
         except Exception as mqtt_err:
