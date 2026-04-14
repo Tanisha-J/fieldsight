@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
@@ -30,6 +30,7 @@ async def upload_scan(
     farmer_id: int = Form(...),
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
+<<<<<<< Updated upstream
     image: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -38,6 +39,20 @@ async def upload_scan(
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
     image_url, image_key = upload_to_oci(image_bytes, image.filename)
+=======
+    image_base64: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    image_bytes = base64.b64decode(image_base64)
+
+    result = await analyze_image(image_bytes)
+
+    if result["disease_status"] == "HEALTHY":
+        return {"status": "discarded", "disease_status": result["disease_status"]}
+
+    image_url, image_key = upload_to_oci(image_bytes, "scan.jpg")
+
+>>>>>>> Stashed changes
     scan = Scan(
         session_id=session_id,
         farmer_id=farmer_id,
@@ -52,4 +67,15 @@ async def upload_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
+<<<<<<< Updated upstream
     return {"status": "stored", "scan_id": scan.scan_id}
+=======
+    return {
+        "status": "stored",
+        "scan_id": scan.scan_id,
+        "image_url": image_url,
+        "disease_status": result["disease_status"],
+        "severity": result["severity"],
+        "short_explanation": result.get("short_explanation")
+    }
+>>>>>>> Stashed changes
