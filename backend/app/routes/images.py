@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Scan
+from app.models import Scan, Farmer, RoverSession
 from app.services.image_analysis_service import analyze_image
 from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
@@ -13,14 +13,31 @@ import binascii
 router = APIRouter()
 
 @router.get("/scans/{session_id}")
-def get_scans(session_id: int, db: Session = Depends(get_db)):
+def get_scans(session_id: int, 
+              db: Session = Depends(get_db),
+              current_user: Farmer = Depends(get_current_user)
+              ):
+    session= db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.farmer_id != current_user.farmer_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view scans for this session")
+    
     scans = db.query(Scan).filter(Scan.session_id == session_id).all()
-    if not scans:
-        raise HTTPException(status_code=404, detail="No scans found for this session")
     return scans
 
 @router.delete("/scans/{session_id}")
-def delete_scans(session_id: int, db: Session = Depends(get_db)):
+def delete_scans(session_id: int, 
+                 db: Session = Depends(get_db), 
+                 current_user: Farmer = Depends(get_current_user)
+                 ):
+    
+    session = db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.farmer_id != current_user.farmer_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete scans for this session")
+
     scans = db.query(Scan).filter(Scan.session_id == session_id).all()
     if not scans:
         raise HTTPException(status_code=404, detail="No scans found for this session")
@@ -37,11 +54,11 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
 @router.post("/scans/upload")
 async def upload_scan(
     session_id: int = Form(...),
-    farmer_id: int = Form(...),
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
     image: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Farmer = Depends(get_current_user),
 ):
     image_bytes = await image.read()
     #1. send to gemini
@@ -66,7 +83,7 @@ async def upload_scan(
     #4. save to db
     scan = Scan(
         session_id=session_id,
-        farmer_id=farmer_id,
+        farmer_id=current_user.farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
         image_url=image_url,
