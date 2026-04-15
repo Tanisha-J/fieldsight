@@ -4,13 +4,36 @@ modules/backend_client.py - FieldSight Backend Communication
 Handles all communication between the rover and the backend server.
 
 Two communication channels:
-    HTTP  — sends captured images to backend via POST /scans/upload
+    HTTP  — sends captured images to backend via POST /scans/upload-base64
     MQTT  — publishes telemetry, subscribes to start/stop commands
+
+Usage:
+    from modules.backend_client import BackendClient
+
+    client = BackendClient(farmer_id=1)
+    client.connect()
+
+    client.upload_scan(
+        image_path = "captured_images/left_123.jpg",
+        session_id = 1,
+        gps_lat    = 37.39,
+        gps_lng    = -121.85
+    )
+
+    client.publish_telemetry(
+        gps_lat  = 37.39,
+        gps_lng  = -121.85,
+        heading  = 90.0,
+        battery  = 85.5
+    )
+
+    client.disconnect()
 """
 
 import json
 import time
 import os
+import base64
 import logging
 import threading
 import requests
@@ -29,6 +52,8 @@ class BackendClient:
         self.farmer_id  = farmer_id
         self.rover_id   = rover_id
         self.session_id = None
+
+        self.base_url = config.BACKEND_URL
 
         self._mqtt         = mqtt.Client()
         self._connected    = False
@@ -94,11 +119,21 @@ class BackendClient:
             command = payload.get("command")
             target_rover_id = payload.get("rover_id")
 
+            # ignore commands meant for other rovers
             if target_rover_id is not None and int(target_rover_id) != int(self.rover_id):
                 return
 
             log.info(f"MQTT command received: {command}")
-
+            if command == "start":
+                session_id = payload.get("session_id")
+                farmer_id = payload.get("farmer_id")  # add this
+                if farmer_id:
+                    self.farmer_id = int(farmer_id)   # add this
+            if session_id is None:
+                log.error("Start command missing session_id")
+                return
+            self.session_id = int(session_id)
+            
             if command == "start":
                 session_id = payload.get("session_id")
                 if session_id is None:
@@ -139,39 +174,42 @@ class BackendClient:
         try:
             token = self._get_token()
             headers = {"Authorization": f"Bearer {token}"}
-            data = {
-                "session_id": str(session_id),
-                "farmer_id":  str(self.farmer_id),
-                "gps_lat":    str(gps_lat),
-                "gps_lng":    str(gps_lng),
-            }
+
             with open(image_path, "rb") as f:
-                files = {"image": ("scan.jpg", f, "image/jpeg")}
-                r = requests.post(
-                    f"{API}/scans/upload",
-                    headers=headers,
-                    data=data,
-                    files=files,
-                    timeout=60
-                )
+                image_base64 = base64.b64encode(f.read()).decode('utf-8')
+
+            data = {
+                "session_id":   str(session_id),
+                "farmer_id":    str(self.farmer_id),
+                "gps_lat":      str(gps_lat),
+                "gps_lng":      str(gps_lng),
+                "image_base64": image_base64,
+                "filename":     os.path.basename(image_path)
+            }
+
+            r = requests.post(
+                f"{API}/scans/upload-base64",
+                headers=headers,
+                data=data,
+                timeout=60
+            )
+
             if r.status_code == 401:
                 token = self._get_token()
                 headers["Authorization"] = f"Bearer {token}"
-                with open(image_path, "rb") as f:
-                    files = {"image": ("scan.jpg", f, "image/jpeg")}
-                    r = requests.post(
-                        f"{API}/scans/upload",
-                        headers=headers,
-                        data=data,
-                        files=files,
-                        timeout=60
-                    )
+                r = requests.post(
+                    f"{API}/scans/upload-base64",
+                    headers=headers,
+                    data=data,
+                    timeout=60
+                )
+
             log.info(f"Upload: {r.status_code} {r.text}")
             return r
         except Exception as e:
             log.error(f"Upload error: {e}")
             return None
-
+    
     # ─────────────────────────────────────────────
     # TELEMETRY (MQTT)
     # ─────────────────────────────────────────────
