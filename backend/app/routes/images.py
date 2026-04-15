@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
-from app.services.image_analysis_service import analyze_image
-from app.services.image_analysis_service import ImageAnalysisError
+from app.services.image_analysis_service import analyze_image, ImageAnalysisError
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 from google.genai.errors import ServerError
@@ -25,13 +24,21 @@ def delete_scans(session_id: int, db: Session = Depends(get_db)):
     if not scans:
         raise HTTPException(status_code=404, detail="No scans found for this session")
     
+    failed_keys = []
     for scan in scans:
         if scan.image_key:
-            delete_from_oci(scan.image_key)
+            try:
+                delete_from_oci(scan.image_key)
+            except Exception:
+                failed_keys.append(scan.image_key)
             
     db.query(Scan).filter(Scan.session_id == session_id).delete()
     db.commit()
-    return {"message": f"All scans deleted for session {session_id}"}
+    
+    return {
+        "message": f"All scans deleted for session {session_id}",
+        "oci_delete_failed_keys": failed_keys,
+    }
 
 
 @router.post("/scans/upload")
@@ -56,31 +63,45 @@ async def upload_scan(
         raise HTTPException(
             status_code=502,
             detail=f"Image analysis failed: {e}",
-    )
+        )
+
 
     #2. if healthy
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
-    #3. upload to oci
-    image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
-    #4. save to db
-    scan = Scan(
-        session_id=session_id,
-        farmer_id=farmer_id,
-        disease_status=result["disease_status"],
-        severity=result["severity"],
-        image_url=image_url,
-        image_key=image_key,
-        gemini_status="completed",
-        gps_lat=gps_lat,
-        gps_lng=gps_lng,
-        short_explanation=result.get("short_explanation"),
-        confidence_score=result.get("confidence_score"),
-    )
-    db.add(scan)
-    db.commit()
-    db.refresh(scan)
     
+    #3. upload to oci
+    image_url = None
+    image_key = None
+    try:
+        image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
+
+        scan = Scan(
+            session_id=session_id,
+            farmer_id=farmer_id,
+            disease_status=result["disease_status"],
+            severity=result["severity"],
+            image_url=image_url,
+            image_key=image_key,
+            gemini_status="completed",
+            gps_lat=gps_lat,
+            gps_lng=gps_lng,
+            short_explanation=result.get("short_explanation"),
+            confidence_score=result.get("confidence_score"),
+        )
+        db.add(scan)
+        db.commit()
+        db.refresh(scan)
+
+    except Exception:
+        db.rollback()
+        if image_key:
+            try:
+                delete_from_oci(image_key)
+            except Exception:
+                pass  # add logging here if you want
+        raise
+
     return {
         "status": "stored",
         "scan_id": scan.scan_id,
@@ -90,6 +111,7 @@ async def upload_scan(
         "short_explanation": result.get("short_explanation"),
         "confidence_score": result.get("confidence_score"),
     }
+
 
 @router.post("/scans/upload-base64")
 async def upload_scan_base64(
@@ -117,34 +139,47 @@ async def upload_scan_base64(
         raise HTTPException(
             status_code=502,
             detail=f"Image analysis failed: {e}",
-    )
+        )
 
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
         return {"status": "discarded", "disease_status": result["disease_status"]}
 
-    image_url, image_key = upload_to_oci(image_bytes, filename)
+    image_url = None
+    image_key = None
+    try:
+        image_url, image_key = upload_to_oci(image_bytes, filename)
 
-    scan = Scan(
-        session_id=session_id,
-        farmer_id=farmer_id,
-        disease_status=result["disease_status"],
-        severity=result["severity"],
-        short_explanation=result.get("short_explanation"),
-        confidence_score=result.get("confidence_score"),
-        image_url=image_url,
-        image_key=image_key,
-        gemini_status="completed",
-        gps_lat=gps_lat,
-        gps_lng=gps_lng,
-    )
-    db.add(scan)
-    db.commit()
-    db.refresh(scan)
-    return {"status": "stored", 
-            "scan_id": scan.scan_id,
-            "image_url": image_url,
-            "disease_status":result["disease_status"],
-            "severity": result["severity"],
-            "short_explanation": result.get("short_explanation"),
-            "confidence_score": result.get("confidence_score"),
-            }
+        scan = Scan(
+            session_id=session_id,
+            farmer_id=farmer_id,
+            disease_status=result["disease_status"],
+            severity=result["severity"],
+            short_explanation=result.get("short_explanation"),
+            confidence_score=result.get("confidence_score"),
+            image_url=image_url,
+            image_key=image_key,
+            gemini_status="completed",
+            gps_lat=gps_lat,
+            gps_lng=gps_lng,
+        )
+        db.add(scan)
+        db.commit()
+        db.refresh(scan)
+    except Exception:
+        db.rollback()
+        if image_key:
+            try:
+                delete_from_oci(image_key)
+            except Exception:
+                pass
+        raise
+
+    return {
+        "status": "stored",
+        "scan_id": scan.scan_id,
+        "image_url": image_url,
+        "disease_status": result["disease_status"],
+        "severity": result["severity"],
+        "short_explanation": result.get("short_explanation"),
+        "confidence_score": result.get("confidence_score"),
+    }
