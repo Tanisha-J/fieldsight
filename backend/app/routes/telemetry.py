@@ -1,7 +1,6 @@
 # backend/app/routes/telemetry.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.db import get_db
 from app.services.telemetry_service import get_latest_telemetry
 

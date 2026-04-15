@@ -2,8 +2,6 @@
 compatibilty for deployed front end.
 these /api endpoints mirror frontend so ui can run without changing main backend routes
 """
-
-
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
