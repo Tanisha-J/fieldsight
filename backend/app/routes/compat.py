@@ -1,3 +1,9 @@
+"""
+compatibilty for deployed front end.
+these /api endpoints mirror frontend so ui can run without changing main backend routes
+"""
+
+
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +14,7 @@ from app.auth import hash_password, verify_password, create_access_token
 from app.db import get_db
 from app.models import Farmer, RoverSession, Scan
 from app.services.mqtt_service import publish_command
-from app.services.rover_service import stop_rover, start_rover
+from app.services.rover_service import create_and_start_rover_session, stop_rover
 from app.services.telemetry_service import get_latest_telemetry
 
 router = APIRouter(prefix="/api", tags=["compat"])
@@ -86,30 +92,36 @@ def compat_user_profile(farmer_id: int, db: Session = Depends(get_db)):
         "last_login": user.last_login
     }
 
-@router.post ("/rover/start")
+@router.post("/rover/start")
 def compat_rover_start(farmer_id: int, db: Session =Depends(get_db)):
     try:
         session= RoverSession(
-            farmer_id= 1,
+            farmer_id=farmer_id,
             rover_id=1,
-            session_date= date.today(),
+            session_date=date.today(),
             status="Running",
-            active_command= "start",
-            started_at= datetime.now(timezone.utc),
+            active_command="start",
+            started_at=datetime.now(timezone.utc),
         )
         db.add(session)
         db.commit()
         db.refresh(session)
 
-
-        return {
+        publish_command(
+            command="start",
+            rover_id= session.rover_id,
+            session_id= session.session_id,
+        
+        )
+        return{
             "session_id": session.session_id,
             "rover_id": session.rover_id,
-            "status": session.status,
+            "status": session.status
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start rover: {e}")
 
+       
 
 @router.post("/rover/stop/{session_id}")
 def compat_rover_stop(session_id: int, db: Session = Depends(get_db)):
