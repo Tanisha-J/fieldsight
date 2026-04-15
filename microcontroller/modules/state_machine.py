@@ -186,26 +186,6 @@ class StateMachine:
 
         log.info("All rows complete")
 
-    def _scan_all_rows(self):
-        """
-        Runs the full scan pattern across all rows.
-
-        Pattern:
-            Row 0: drive forward, scan 4 times
-            Turn right 90°
-            Drive row spacing (98 inches)
-            Turn right 90°
-            Row 1: drive forward, scan 4 times
-        """
-        for row in range(config.NUM_ROWS):
-            self.current_row = row
-            log.info(f"Starting row {row + 1} of {config.NUM_ROWS}")
-            self._scan_row()
-
-            if row < config.NUM_ROWS - 1:
-                self._navigate_to_next_row()
-
-        log.info("All rows complete")
 
     def _scan_row(self):
         """
@@ -225,7 +205,7 @@ class StateMachine:
                 self.motors.stop()
                 return
             log.info(f"  Driving to capture point {stop_num + 1}/{config.CAPTURES_PER_ROW}")
-            
+
             # Drive to next capture point
             self.state = State.DRIVING
             self.motors.forward(config.CRUISE_PWM)
