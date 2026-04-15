@@ -124,18 +124,12 @@ class BackendClient:
                 return
 
             log.info(f"MQTT command received: {command}")
+
             if command == "start":
                 session_id = payload.get("session_id")
                 farmer_id = payload.get("farmer_id")  # add this
                 if farmer_id:
                     self.farmer_id = int(farmer_id)   # add this
-            if session_id is None:
-                log.error("Start command missing session_id")
-                return
-            self.session_id = int(session_id)
-            
-            if command == "start":
-                session_id = payload.get("session_id")
                 if session_id is None:
                     log.error("Start command missing session_id")
                     return
@@ -143,6 +137,7 @@ class BackendClient:
                 log.info(f"Start command — session_id={self.session_id}")
                 if self._on_start_cb:
                     self._on_start_cb(self.session_id)
+            
 
             elif command == "stop":
                 log.info("Stop command received")
