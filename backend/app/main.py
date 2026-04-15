@@ -5,7 +5,7 @@ load_dotenv()
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import rover, images, health, telemetry, auth, compat
+from app.routes import rover, images, health, telemetry, auth, compat, websocket
 from app.services.mqtt_service import start_mqtt_client
 
 
@@ -40,6 +40,7 @@ app.include_router(images.router)
 app.include_router(telemetry.router)
 app.include_router(auth.router)
 app.include_router(compat.router)
+app.include_router(websocket.router)
 
 @app.get("/")
 def root():
