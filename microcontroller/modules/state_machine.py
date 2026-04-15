@@ -122,27 +122,6 @@ class StateMachine:
             self._emergency_stop()
             self._cleanup()
 
-    def run(self):
-        """
-        Runs the full scan sequence.
-        Called once by main.py.
-        Always cleans up hardware even if something crashes.
-        """
-        try:
-            self._startup()
-            self._scan_all_rows()
-            self._finish()
-
-        except KeyboardInterrupt:
-            log.info("Scan interrupted by user")
-
-        except Exception as e:
-            log.error(f"Unexpected error during scan: {e}")
-            self.state = State.ERROR
-
-        finally:
-            self._emergency_stop()
-            self._cleanup()
 
     # ─────────────────────────────────────────────
     # STARTUP
@@ -206,7 +185,7 @@ class StateMachine:
                 self._navigate_to_next_row()
 
         log.info("All rows complete")
-        
+
     def _scan_all_rows(self):
         """
         Runs the full scan pattern across all rows.
