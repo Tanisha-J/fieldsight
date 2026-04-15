@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Scan
 from app.services.image_analysis_service import analyze_image
+from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 from google.genai.errors import ServerError
@@ -50,6 +51,11 @@ async def upload_scan(
         raise HTTPException(
             status_code=503,
             detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
+    except ImageAnalysisError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Image analysis failed: {e}",
     )
 
     #2. if healthy
@@ -106,6 +112,11 @@ async def upload_scan_base64(
         raise HTTPException(
             status_code=503,
             detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
+    except ImageAnalysisError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Image analysis failed: {e}",
     )
 
     if result["disease_status"] in ("HEALTHY", "NO PLANT"):
