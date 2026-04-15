@@ -13,7 +13,7 @@ router = APIRouter(prefix="/rover", tags=["rover"])
 @router.post("/start")
 def start(
      db: Session= Depends(get_db),
-     current_user: Famer = Depends(get_current_user),
+     current_user: Farmer = Depends(get_current_user),
 ):
     try:
          session=RoverSession(
