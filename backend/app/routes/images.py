@@ -72,11 +72,14 @@ async def upload_scan(
     #1. send to gemini
     try:
         result = await analyze_image(image_bytes)
-    except ServerError:
+    except Exception as e:
+        print(f"[IMAGE ANALYSIS ERROR] {e}")
         raise HTTPException(
-            status_code=503,
-            detail="Image analysis temporarily unavailable (model overloaded). Please retry."
-    )
+                status_code=503,
+                 detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+                  
+              )
+    
     except ImageAnalysisError as e:
         raise HTTPException(
             status_code=502,
