@@ -12,7 +12,7 @@ from app.auth import hash_password, verify_password, create_access_token
 from app.db import get_db
 from app.models import Farmer, RoverSession, Scan
 from app.services.mqtt_service import publish_command
-from app.services.rover_service import create_and_start_rover_session, stop_rover
+from app.services.rover_service import stop_rover
 from app.services.telemetry_service import get_latest_telemetry
 
 router = APIRouter(prefix="/api", tags=["compat"])
