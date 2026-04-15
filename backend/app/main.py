@@ -21,10 +21,10 @@ async def lifespan(app: FastAPI):
 
 app= FastAPI(title = "FieldSight API", lifespan= lifespan)
 
-raw_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173",
-                        "https://fieldsightproject.com",
-                        "https://www.fieldsightproject.com",
-                        "https://field-sight-frontend.vercel.app")
+raw_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,https://fieldsightproject.com,https://www.fieldsightproject.com,https://field-sight-frontend.vercel.app",
+)
 
 cors_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
