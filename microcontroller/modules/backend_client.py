@@ -75,7 +75,6 @@ class BackendClient:
 
         try:
             log.info(f"Connecting to MQTT broker at {config.MQTT_BROKER_URL}:{config.MQTT_PORT}")
-            self._mqtt.username_pw_set("fieldsight_rover", "roverpass")
             self._mqtt.connect(
                 config.MQTT_BROKER_URL,
                 config.MQTT_PORT,

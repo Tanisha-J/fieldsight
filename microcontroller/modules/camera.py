@@ -1,30 +1,29 @@
 """
 modules/camera.py - FieldSight Camera Controller
 =================================================
-Manages both USB cameras on the FieldSight rover.
+Manages right and left USB cameras on the rover.
 
-This module is imported by state_machine.py to capture images
-of tomato crops as the rover drives down each row.
+* module called on by state_machine.py to capture images
 
 Hardware layout:
     Left camera  — mounted on left side of rover, points at left crop row
     Right camera — mounted on right side of rover, points at right crop row
-    Both cameras are at 8.4" height from ground — confirmed for 6-10" plants.
+    Both cameras are at around 8" from ground — plants at around 9".
 
-Design note:
-    Both cameras are the same model (Innomaker U20CAM) on the same USB hub.
-    When both are opened simultaneously they compete for USB bandwidth and
-    the second camera times out. The fix is to open, capture, and close
-    each camera sequentially rather than keeping both open at once.
-    Tested and confirmed working on the Pi with both cameras connected.
+Debugging notes after testing camera:
+    When both cameras are opened simultaneously they compete for USB bandwidth and
+    the second camera was timing out. Solution was to open, capture, and close
+    each camera sequentially instead of both open at same time.
 
-Usage:
+    Tested and confirmed working on the Pi with both cameras connected!!!!
+
+how to use:
     from modules.camera import CameraController
 
     camera = CameraController()
     left_path, right_path = camera.capture_both()
 
-Image storage:
+Image pathways:
     Captured images are saved to CAMERA_SAVE_DIR (from config.py).
     Filenames include a timestamp so they never overwrite each other.
     backend_client.py reads from this folder to send images to the backend.
@@ -38,34 +37,28 @@ import config
 
 class CameraController:
     """
-    Controls both USB cameras on the FieldSight rover.
-
-    Opens each camera only when capturing, then closes it immediately.
-    This avoids USB bandwidth conflicts when both cameras are the same
-    model on the same USB hub.
-
+    Opens each camera only when capturing, then closes it immediately
     Example:
         camera = CameraController()
 
-        # Capture from both cameras at each scan point
+        # Capture from both cameras at each decided point
         left_path, right_path = camera.capture_both()
 
-        # No need to call open() or close() — handled internally
+        # dont need open() or close() 
     """
 
     def __init__(self):
         """
         Sets up the camera controller.
         Creates the save directory if it doesn't exist.
-        No cameras are opened here — they open only during capture.
+        No cameras are opened during this part of code.
         """
-        # Make sure the save directory exists
+        #confirmed existence of save directory 
         os.makedirs(config.CAMERA_SAVE_DIR, exist_ok=True)
 
-    # ─────────────────────────────────────────────
+
     # IMAGE CAPTURE
     # Each method opens the camera, captures, saves, and closes.
-    # ─────────────────────────────────────────────
 
     def capture_left(self):
         """
@@ -73,10 +66,10 @@ class CameraController:
 
         Returns:
             str — full file path of the saved image
-                  e.g. "captured_images/left_1711234567890.jpg"
 
         Raises:
             RuntimeError: if camera cannot be opened or frame read fails
+        #both tested and working
         """
         return self._capture_single(config.CAMERA_LEFT_INDEX, "left")
 
@@ -86,7 +79,6 @@ class CameraController:
 
         Returns:
             str — full file path of the saved image
-                  e.g. "captured_images/right_1711234567890.jpg"
 
         Raises:
             RuntimeError: if camera cannot be opened or frame read fails
@@ -96,7 +88,7 @@ class CameraController:
     def capture_both(self):
         """
         Captures from left camera then right camera sequentially.
-        Called by state_machine.py at every scan point.
+        Called by state_machine.py at each of the four scan points
 
         Returns:
             tuple — (left_image_path, right_image_path)

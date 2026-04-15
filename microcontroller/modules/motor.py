@@ -165,8 +165,8 @@ class MotorController:
     # ─────────────────────────────────────────────
 
     def forward(self, speed=config.CRUISE_PWM):
-        self.m1.forward(0.44)  # front-left
-        self.m2.forward(0.44)  # rear-left
+        self.m1.forward(0.43)  # front-left
+        self.m2.forward(0.43)  # rear-left
         self.m3.forward(0.45)  # front-right
         self.m4.forward(0.45)  # rear-right
 
