@@ -71,6 +71,12 @@ async def upload_scan(
     current_user: Farmer = Depends(get_current_user),
 ):
     image_bytes = await image.read()
+    # making sure this is a valid session
+    session = db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.farmer_id != current_user.farmer_id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
     #1. send to gemini
     try:
         result = await analyze_image(image_bytes)
@@ -121,7 +127,6 @@ async def upload_scan(
 @router.post("/scans/upload-base64")
 async def upload_scan_base64(
     session_id: int = Form(...),
-    farmer_id: int = Form(...),
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
     image_base64: str = Form(...),
@@ -131,8 +136,14 @@ async def upload_scan_base64(
 ):
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
-    except (binascii.Error, ValueError):
-        raise HTTPException(status_code=400, detail="Invalid base64 image payload")
+        # making sure this is a valid session
+        session = db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if session.farmer_id != current_user.farmer_id:
+            raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
+        except (binascii.Error, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid base64 image payload")
     
     try:
         result = await analyze_image(image_bytes)
@@ -157,7 +168,7 @@ async def upload_scan_base64(
 
         scan = Scan(
             session_id=session_id,
-            farmer_id=current.user.farmer_id,
+            farmer_id=current_user.farmer_id,
             disease_status=result["disease_status"],
             severity=result["severity"],
             short_explanation=result.get("short_explanation"),
