@@ -74,19 +74,13 @@ async def upload_scan(
     #1. send to gemini
     try:
         result = await analyze_image(image_bytes)
-    except Exception as e:
-        print(f"[IMAGE ANALYSIS ERROR] {e}")
-        raise HTTPException(
-                status_code=503,
-                 detail="Image analysis temporarily unavailable (model overloaded). Please retry."
-                  
-              )
-    
     except ImageAnalysisError as e:
+        raise HTTPException(status_code=502, detail=f"Image analysis failed: {e}")
+    except ServerError:
         raise HTTPException(
-            status_code=502,
-            detail=f"Image analysis failed: {e}",
-        )
+            status_code=503,
+            detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
 
 
     #2. if healthy
@@ -98,7 +92,7 @@ async def upload_scan(
     #4. save to db
     scan = Scan(
         session_id=session_id,
-        farmer_id=farmer_id,
+        farmer_id=current_user.farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
         image_url=image_url,
