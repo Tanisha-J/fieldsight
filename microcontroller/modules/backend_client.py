@@ -4,36 +4,13 @@ modules/backend_client.py - FieldSight Backend Communication
 Handles all communication between the rover and the backend server.
 
 Two communication channels:
-    HTTP  — sends captured images to backend via POST /scans/upload-base64
+    HTTP  — sends captured images to backend via POST /scans/upload
     MQTT  — publishes telemetry, subscribes to start/stop commands
-
-Usage:
-    from modules.backend_client import BackendClient
-
-    client = BackendClient(farmer_id=1)
-    client.connect()
-
-    client.upload_scan(
-        image_path = "captured_images/left_123.jpg",
-        session_id = 1,
-        gps_lat    = 37.39,
-        gps_lng    = -121.85
-    )
-
-    client.publish_telemetry(
-        gps_lat  = 37.39,
-        gps_lng  = -121.85,
-        heading  = 90.0,
-        battery  = 85.5
-    )
-
-    client.disconnect()
 """
 
 import json
 import time
 import os
-import base64
 import logging
 import threading
 import requests
@@ -43,6 +20,8 @@ import config
 
 log = logging.getLogger(__name__)
 
+API = "https://api.fieldsightproject.com"
+
 
 class BackendClient:
 
@@ -50,8 +29,6 @@ class BackendClient:
         self.farmer_id  = farmer_id
         self.rover_id   = rover_id
         self.session_id = None
-
-        self.base_url = config.BACKEND_URL
 
         self._mqtt         = mqtt.Client()
         self._connected    = False
@@ -117,7 +94,6 @@ class BackendClient:
             command = payload.get("command")
             target_rover_id = payload.get("rover_id")
 
-            # ignore commands meant for other rovers
             if target_rover_id is not None and int(target_rover_id) != int(self.rover_id):
                 return
 
@@ -150,32 +126,48 @@ class BackendClient:
     # IMAGE UPLOAD (HTTP)
     # ─────────────────────────────────────────────
 
+    def _get_token(self):
+        r = requests.post(
+            f"{API}/auth/login",
+            json={"username": "pi_uploader", "password": "pi_password"},
+            timeout=15
+        )
+        r.raise_for_status()
+        return r.json()["access_token"]
+
     def upload_scan(self, image_path, session_id, gps_lat, gps_lng):
-        url = f"{self.base_url}/scans/upload-base64"
-
         try:
-            with open(image_path, "rb") as image_file:
-                image_base64 = base64.b64encode(image_file.read()).decode("utf-8")
-
-            payload = {
-                "session_id":   str(session_id),
-                "farmer_id":    str(self.farmer_id),
-                "gps_lat":      str(gps_lat),
-                "gps_lng":      str(gps_lng),
-                "image_base64": image_base64,
-                "filename":     os.path.basename(image_path) or "scan.jpg",
+            token = self._get_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            data = {
+                "session_id": str(session_id),
+                "farmer_id":  str(self.farmer_id),
+                "gps_lat":    str(gps_lat),
+                "gps_lng":    str(gps_lng),
             }
-
-            response = requests.post(url, data=payload, timeout=config.GEMINI_TIMEOUT_SEC)
-
-            if response.status_code == 200:
-                result = response.json()
-                log.info(f"Upload successful: {result}")
-                return result
-            else:
-                log.error(f"Upload failed: {response.status_code} — {response.text}")
-                return None
-
+            with open(image_path, "rb") as f:
+                files = {"image": ("scan.jpg", f, "image/jpeg")}
+                r = requests.post(
+                    f"{API}/scans/upload",
+                    headers=headers,
+                    data=data,
+                    files=files,
+                    timeout=60
+                )
+            if r.status_code == 401:
+                token = self._get_token()
+                headers["Authorization"] = f"Bearer {token}"
+                with open(image_path, "rb") as f:
+                    files = {"image": ("scan.jpg", f, "image/jpeg")}
+                    r = requests.post(
+                        f"{API}/scans/upload",
+                        headers=headers,
+                        data=data,
+                        files=files,
+                        timeout=60
+                    )
+            log.info(f"Upload: {r.status_code} {r.text}")
+            return r
         except Exception as e:
             log.error(f"Upload error: {e}")
             return None
