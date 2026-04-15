@@ -7,6 +7,8 @@ from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
 from app.services.oci_service import delete_from_oci
 from google.genai.errors import ServerError
+from app.auth import get_current_user
+from app.models import Farmer
 import base64
 import binascii
 
