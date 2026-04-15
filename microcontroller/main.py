@@ -44,7 +44,7 @@ log = logging.getLogger(__name__)
 
 # Farmer ID from the database
 # Ask your backend team what value to use for testing
-FARMER_ID = 1   # ← update this with real farmer_id
+FARMER_ID = 8   # ← update by yeh
 
 # Rover ID — identifies this specific rover
 ROVER_ID  = 1
