@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Scan
+from app.models import Scan, RoverSession
 from app.services.image_analysis_service import analyze_image
 from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
