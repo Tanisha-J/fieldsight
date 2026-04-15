@@ -6,6 +6,7 @@ from app.db import SessionLocal
 from app.models import Scan
 from app.services.telemetry_service import get_latest_telemetry
 
+
 router = APIRouter(tags=["websocket"])
 
 
@@ -26,7 +27,7 @@ def _scan_payload(scan: Scan) -> dict:
 
 
 @router.websocket("/websocket/telemetry/{rover_id}")
-async def telemetry_ws(websocket: WebSocket, rover_id: int):
+async def telemetry_endpoint(websocket: WebSocket, rover_id: int):
     await websocket.accept()
     last_ts = None
     try:
@@ -50,7 +51,7 @@ async def telemetry_ws(websocket: WebSocket, rover_id: int):
 
             await asyncio.sleep(1)
     except WebSocketDisconnect:
-        return
+        print(f"Rover {rover_id} disconnected")
 
 
 @router.websocket("/websocket/scans/{session_id}")
