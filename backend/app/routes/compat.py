@@ -20,11 +20,14 @@ from app.services.telemetry_service import get_latest_telemetry
 router = APIRouter(prefix="/api", tags=["compat"])
 
 class SignupRequest(BaseModel):
-    first_name: str = Field(min_length=1, max_length=50)
-    last_name: str = Field(min_length=1, max_length=50)
+    first_name: str = Field(min_length=1, max_length=50, alias="firstName")
+    last_name: str = Field(min_length=1, max_length=50, alias="lastName")
     username: str = Field(min_length=3, max_length=20)
-    password: str = Field(min_length=8, max_length=128)
-    farm_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=72)
+    farm_name: str = Field(min_length=1, max_length=50, alias="farmName")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class LoginRequest (BaseModel):
     username:str
@@ -35,15 +38,23 @@ def compat_signup(payload:SignupRequest, db: Session = Depends(get_db)):
     existing = db.query(Farmer).filter(Farmer.username == payload.username).first()
     if existing:
         raise HTTPException(status_code=409, detail="Username already exists")
-    user=Farmer(
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        username=payload.username,
-        password_hash=hash_password(payload.password),
-        farm_name=payload.farm_name
-    )
-    db.add(user)
-    db.commit()
+    try:
+        user = Farmer(
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            username=payload.username,
+            password_hash=hash_password(payload.password),
+            farm_name=payload.farm_name
+        )
+        db.add(user)
+        db.commit()
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Signup failed: {e}")
+
     db.refresh(user)
 
     return{

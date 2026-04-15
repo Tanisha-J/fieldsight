@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS Farmers (
 CREATE TABLE IF NOT EXISTS Rover_Sessions (
     session_id INT AUTO_INCREMENT PRIMARY KEY,
     farmer_id INT NOT NULL,
+    rover_id INT NOT NULL DEFAULT 1,
     session_date DATE NOT NULL,
     started_at TIMESTAMP NULL,
     stopped_at TIMESTAMP NULL,
