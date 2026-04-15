@@ -88,6 +88,7 @@ class StateMachine:
         self.gps        = GPS()
         self.backend    = backend       # None = testing mode
         self.session_id = session_id    # None = no uploads
+        self._stop_check = None
 
         # Track scan progress
         self.current_row      = 0
@@ -100,6 +101,26 @@ class StateMachine:
     # ─────────────────────────────────────────────
     # MAIN ENTRY POINT
     # ─────────────────────────────────────────────
+    def run(self, stop_check=None):
+        self._stop_check = stop_check
+        try:
+            self._startup()
+            if self._stop_check and self._stop_check():
+                log.info("Stop requested before scan started")
+                return
+            self._scan_all_rows()
+            self._finish()
+
+        except KeyboardInterrupt:
+            log.info("Scan interrupted by user")
+
+        except Exception as e:
+            log.error(f"Unexpected error during scan: {e}")
+            self.state = State.ERROR
+
+        finally:
+            self._emergency_stop()
+            self._cleanup()
 
     def run(self):
         """
@@ -169,7 +190,23 @@ class StateMachine:
     # ─────────────────────────────────────────────
     # MAIN SCAN LOOP
     # ─────────────────────────────────────────────
+    def _scan_all_rows(self):
+        for row in range(config.NUM_ROWS):
+            if self._stop_check and self._stop_check():
+                log.info("Stop requested — aborting scan")
+                return
+            self.current_row = row
+            log.info(f"Starting row {row + 1} of {config.NUM_ROWS}")
+            self._scan_row()
 
+            if row < config.NUM_ROWS - 1:
+                if self._stop_check and self._stop_check():
+                    log.info("Stop requested — aborting between rows")
+                    return
+                self._navigate_to_next_row()
+
+        log.info("All rows complete")
+        
     def _scan_all_rows(self):
         """
         Runs the full scan pattern across all rows.

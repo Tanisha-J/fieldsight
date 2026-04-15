@@ -118,7 +118,7 @@ def main():
     backend.start_telemetry_loop(sm)
 
     try:
-        sm.run()
+        sm.run(stop_check=lambda: stop_requested)
 
     except KeyboardInterrupt:
         log.info("Scan interrupted by user")
