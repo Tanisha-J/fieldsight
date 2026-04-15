@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Scan, RoverSession
+from app.models import Scan, RoverSession, Farmer
 from app.services.image_analysis_service import analyze_image
 from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
@@ -126,7 +126,8 @@ async def upload_scan_base64(
     gps_lng: float = Form(...),
     image_base64: str = Form(...),
     filename: str = Form("scan.jpg"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Farmer = Depends(get_current_user)
 ):
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
@@ -156,7 +157,7 @@ async def upload_scan_base64(
 
         scan = Scan(
             session_id=session_id,
-            farmer_id=farmer_id,
+            farmer_id=current.user.farmer_id,
             disease_status=result["disease_status"],
             severity=result["severity"],
             short_explanation=result.get("short_explanation"),
@@ -177,7 +178,7 @@ async def upload_scan_base64(
                 delete_from_oci(image_key)
             except Exception:
                 pass
-        raise
+        raise HTTPException(status_code=500, detail=f"Database/OCI failure: {str(e)}")
 
     return {
         "status": "stored",
