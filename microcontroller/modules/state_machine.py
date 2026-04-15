@@ -218,9 +218,14 @@ class StateMachine:
             4. Start upload in background
             5. Start driving again immediately
         """
+    
         for stop_num in range(config.CAPTURES_PER_ROW):
+            if self._stop_check and self._stop_check():
+                log.info("Stop requested — aborting row")
+                self.motors.stop()
+                return
             log.info(f"  Driving to capture point {stop_num + 1}/{config.CAPTURES_PER_ROW}")
-
+            
             # Drive to next capture point
             self.state = State.DRIVING
             self.motors.forward(config.CRUISE_PWM)
