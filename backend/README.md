@@ -1,6 +1,6 @@
 # Backend Set Up Instructions
 
-### ## VM Access Setup (One-Time Per Developer)
+### VM Access Setup (One-Time Per Developer)
 **generate an SSH key on your laptop:**
 ```bash
 ssh-keygen -t ed25519 -C "your-name-fieldsight" -f ~/.ssh/fieldsight_key
@@ -15,7 +15,7 @@ ssh-keygen -t ed25519 -C "your-name-fieldsight" -f ~/.ssh/fieldsight_key
 ssh -i ~/.ssh/fieldsight_key opc@64.181.240.74
 ```
 
-### ### ssh into the VM
+### ssh into the VM
 **go to the project root:**
 ```bash
 cd /opt/fieldsight
@@ -32,12 +32,12 @@ git pull --ff-only origin main
 /opt/fieldsight/.venv/bin/pip install -r /opt/fieldsight/requirements.txt
 ```
 
-### ## configure backend environment variables in:
+### configure backend environment variables in:
 `/etc/fieldsight.env`
 
-### ## initialize database tables by running schema.sql once when setting up a new database
+### initialize database tables by running schema.sql once when setting up a new database
 
-### ## run syntax checks before restart:
+### run syntax checks before restart:
 ```bash
 /opt/fieldsight/.venv/bin/python -m py_compile /opt/fieldsight/backend/app/main.py /opt/fieldsight/backend/app/routes/*.py /opt/fieldsight/backend/app/services/*.py
 ```
@@ -56,7 +56,7 @@ curl -i https://api.fieldsightproject.com/health
 
 ---
 
-### ## MQTT Broker (Mosquitto)
+### MQTT Broker (Mosquitto)
 **start broker:**
 ```bash
 sudo systemctl start mosquitto
