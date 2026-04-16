@@ -1,9 +1,9 @@
 # FieldSight 🛰️
-Autonomous crop disease detection system.
+A minimal viable product autonomous crop disease detection rover.
 
 ## Project Structure
-- **/frontend**: React + Tailwind + Mapbox
-- **/backend**: FastAPI + MySQL + Gemini AI
+- **/frontend**: React + CSS + Mapbox GL JS
+- **/backend**: FastAPI + MySQL + Gemini AI + OCI
 - **/microcontroller**: Raspberry Pi Hardware Control (motor, GPS, camera)
 
 ### Backend Set Up Instructions
@@ -13,10 +13,8 @@ Autonomous crop disease detection system.
 - create .env file to add local database credentials
 
 ### Frontend Set Up Instructions
-- navigate to the frontend folder
-- run <npm install> to download all the styling and logic tools
-- run <npm run dev> to start the local server
-- runs on http://localhost:8000 on default and port 5173 can be used from the Vite dev server
+- use this link to access the frontend repo connected to Vercel
+- https://github.com/tiyaG/FieldSight_frontend
 
 ## API Contract
 we need to do this contract to define our features and write down the endpoints to keep transparency between the frontend and backend.
@@ -30,8 +28,6 @@ The microcontroller system uses a Raspberry Pi 4.
 - Captures crop images (camera module)
 - Retrieves GPS coordinates (gps module)
 
-### Data Flow
-Camera/GPS → Raspberry Pi → Backend → Database → UI
+### Analysis Data Flow
+Camera/GPS → Raspberry Pi → Backend → Gemini API → Database → Frontend
 
-### Team Update
-We are currently creating placeholder functions so backend can begin testing, starting with camera. 
