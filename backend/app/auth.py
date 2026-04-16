@@ -70,6 +70,26 @@ def get_current_user(
 
     return user
 
+def get_current_user_from_token(token: str, db: Session) -> Farmer:
+    creds_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise creds_exc
+    except JWTError:
+        raise creds_exc
+
+    user = db.query(Farmer).filter(Farmer.username == username).first()
+    if not user:
+        raise creds_exc
+    return user
+
+
 
 
 

@@ -94,24 +94,27 @@ async def upload_scan(
         return {"status": "discarded", "disease_status": result["disease_status"]}
     
     #3. upload to oci
-    image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
-    #4. save to db
-    scan = Scan(
-        session_id=session_id,
-        farmer_id=current_user.farmer_id,
-        disease_status=result["disease_status"],
-        severity=result["severity"],
-        image_url=image_url,
-        image_key=image_key,
-        gemini_status="completed",
-        gps_lat=gps_lat,
-        gps_lng=gps_lng,
-        short_explanation=result.get("short_explanation"),
-        confidence_score=result.get("confidence_score"),
-    )
-    db.add(scan)
-    db.commit()
-    db.refresh(scan)
+    image_url = None
+    image_key = None
+    try:
+        image_url, image_key = upload_to_oci(image_bytes, image.filename or "scan.jpg")
+        #4. save to db
+        scan = Scan(
+            session_id=session_id,
+            farmer_id=current_user.farmer_id,
+            disease_status=result["disease_status"],
+            severity=result["severity"],
+            image_url=image_url,
+            image_key=image_key,
+            gemini_status="completed",
+            gps_lat=gps_lat,
+            gps_lng=gps_lng,
+            short_explanation=result.get("short_explanation"),
+            confidence_score=result.get("confidence_score"),
+        )
+        db.add(scan)
+        db.commit()
+        db.refresh(scan)
     except Exception as e:
         db.rollback()
         # If DB fails, we MUST delete from OCI or we pay for "ghost" files
