@@ -17,7 +17,7 @@ go to the project root:
 <git checkout main>
 <git pull --ff-only origin main>
 
-## install Python dependencies:
+## install python dependencies:
 </opt/fieldsight/.venv/bin/pip install -r /opt/fieldsight/requirements.txt>
 
 ## configure backend environment variables in:
@@ -35,13 +35,13 @@ verify backend status:
 <curl -i http://127.0.0.1:8000/health>
 <curl -i https://api.fieldsightproject.com/health>
 
-## MQTT Broker (Mosquitto)
-### start broker:
+## MQTT broker (mosquitto)
+start broker: 
 <sudo systemctl start mosquitto>
 
-### enable broker on reboot:
+enable broker on reboot: 
 <sudo systemctl enable mosquitto>
 
-### verify broker:
+verify broker:
 <sudo systemctl status mosquitto --no-pager>
 <sudo journalctl -u mosquitto -n 80 --no-pager>
