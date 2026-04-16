@@ -142,7 +142,7 @@ async def upload_scan_base64(
             raise HTTPException(status_code=404, detail="Session not found")
         if session.farmer_id != current_user.farmer_id:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
-        except (binascii.Error, ValueError):
+    except (binascii.Error, ValueError):
             raise HTTPException(status_code=400, detail="Invalid base64 image payload")
     
     try:
