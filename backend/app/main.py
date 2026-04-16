@@ -9,8 +9,6 @@ from app.routes import rover, images, health, telemetry, auth, compat, websocket
 from app.services.mqtt_service import start_mqtt_client
 
 
-
-
 #frontend (react) to talk to backend
 
 @asynccontextmanager
