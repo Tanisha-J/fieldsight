@@ -1,11 +1,10 @@
 import asyncio
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
 from sqlalchemy.orm import Session
-
 from app.db import SessionLocal
-from app.models import Scan
+from app.models import Scan, RoverSession
 from app.services.telemetry_service import get_latest_telemetry
-
+from app.auth import get_current_user_from_token
 
 router = APIRouter(tags=["websocket"])
 
@@ -36,68 +35,99 @@ def _telemetry_payload(row: dict) -> dict:
         "captured_at": row.get("captured_at").isoformat() if row.get("captured_at") else None,
     }
 
-
 @router.websocket("/websocket/telemetry/{rover_id}")
-#fastapi's dependency injection
-async def telemetry_endpoint(websocket: WebSocket, rover_id: int, token: str, db: Session = Depends(get_db)):
+async def telemetry_endpoint(
+    websocket: WebSocket,
+    rover_id: int,
+    token: str = Query(...),
+):
     await websocket.accept()
-    #checking if rover exists
-    rover = db.query(Rover).filter(Rover.id == rover_id).first()
-    if not rover:
-        await websocket.send_json({"error": "Invalid Rover ID"})
-        await websocket.close(code=4004)
-        return
 
-    # 2. Import and check Auth
-    from app.routes.auth import get_current_user_from_token
-    user = get_current_user_from_token(token, db)
-    
-    if not user or rover.farmer_id != user.id:
-        await websocket.send_json({"error": "Unauthorized access to this rover"})
+    # auth + rover ownership check once at connect
+    db: Session = SessionLocal()
+    try:
+        user = get_current_user_from_token(token, db)
+
+        # Authorize by session ownership for this rover
+        owned_session = (
+            db.query(RoverSession)
+            .filter(
+                RoverSession.rover_id == rover_id,
+                RoverSession.farmer_id == user.farmer_id,
+            )
+            .order_by(RoverSession.session_id.desc())
+            .first()
+        )
+        if not owned_session:
+            await websocket.send_json({"error": "Unauthorized"})
+            await websocket.close(code=4003)
+            return
+    except HTTPException:
+        await websocket.send_json({"error": "Unauthorized"})
         await websocket.close(code=4003)
         return
-
-    
+    finally:
+        db.close()
 
     last_ts = None
     try:
         while True:
-            #get latest row from this session
-            row = get_latest_telemetry(db=db, rover_id=rover_id)
+            db = SessionLocal()
+            try:
+                row = get_latest_telemetry(db=db, rover_id=rover_id)
+            finally:
+                db.close()
 
-            if row: 
-                #getting datetime object
-                ts = row.get("captured_at")
+            ts = row.get("captured_at") if row else None
+            if row is not None and ts != last_ts:
+                await websocket.send_json(
+                    {
+                        "type": "telemetry.latest",
+                        "rover_id": rover_id,
+                        "telemetry": _telemetry_payload(row),
+                    }
+                )
+                last_ts = ts
 
-                if ts ! = last_ts:
-                    #telemetry_payload handles dates
-                    payload = _telemetry_payload(row)
-                    #datetime objects to strings
-                    if isinstance(payload.get("captured_at"), datetime):
-                        payload["captured_at"] = payload["captured_at"].isoformat()
-            
-                    await websocket.send_json(
-                        {
-                            "type": "telemetry.latest",
-                            "rover_id": rover_id,
-                            "telemetry": payload),
-                        }
-                    )
-                    last_ts = ts
-
-                await asyncio.sleep(1)
-        except WebSocketDisconnect:
-            print(f"Rover {rover_id} disconnected")
-        except Exception as e:
-            print(f"WebSocket Error: {e}")
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        return
 
 @router.websocket("/websocket/scans/{session_id}")
-async def scans_ws(websocket: WebSocket, session_id: int):
+async def scans_ws(
+    websocket: WebSocket,
+    session_id: int,
+    token: str = Query(...),
+):
     await websocket.accept()
+
+    db: Session = SessionLocal()
+    try:
+        user = get_current_user_from_token(token, db)
+        session = (
+            db.query(RoverSession)
+            .filter(RoverSession.session_id == session_id)
+            .first()
+        )
+        if not session:
+            await websocket.send_json({"error": "Session not found"})
+            await websocket.close(code=4004)
+            return
+        if session.farmer_id != user.farmer_id:
+            await websocket.send_json({"error": "Unauthorized"})
+            await websocket.close(code=4003)
+            return
+    except HTTPException:
+        await websocket.send_json({"error": "Unauthorized"})
+        await websocket.close(code=4003)
+        return
+    finally:
+        db.close()
+
     last_scan_id = 0
     try:
         while True:
-            db: Session = SessionLocal()
+            db = SessionLocal()
             try:
                 scans = (
                     db.query(Scan)
