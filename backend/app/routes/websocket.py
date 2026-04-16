@@ -38,32 +38,58 @@ def _telemetry_payload(row: dict) -> dict:
 
 
 @router.websocket("/websocket/telemetry/{rover_id}")
-async def telemetry_endpoint(websocket: WebSocket, rover_id: int):
+#fastapi's dependency injection
+async def telemetry_endpoint(websocket: WebSocket, rover_id: int, token: str, db: Session = Depends(get_db)):
     await websocket.accept()
+    #checking if rover exists
+    rover = db.query(Rover).filter(Rover.id == rover_id).first()
+    if not rover:
+        await websocket.send_json({"error": "Invalid Rover ID"})
+        await websocket.close(code=4004)
+        return
+
+    # 2. Import and check Auth
+    from app.routes.auth import get_current_user_from_token
+    user = get_current_user_from_token(token, db)
+    
+    if not user or rover.farmer_id != user.id:
+        await websocket.send_json({"error": "Unauthorized access to this rover"})
+        await websocket.close(code=4003)
+        return
+
+    
+
     last_ts = None
     try:
         while True:
-            db: Session = SessionLocal()
-            try:
-                row = get_latest_telemetry(db=db, rover_id=rover_id)
-            finally:
-                db.close()
+            #get latest row from this session
+            row = get_latest_telemetry(db=db, rover_id=rover_id)
 
-            ts = row.get("captured_at") if row else None
-            if ts != last_ts and row is not None:
-                await websocket.send_json(
-                    {
-                        "type": "telemetry.latest",
-                        "rover_id": rover_id,
-                        "telemetry": _telemetry_payload(row),
-                    }
-                )
-                last_ts = ts
+            if row: 
+                #getting datetime object
+                ts = row.get("captured_at")
 
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        print(f"Rover {rover_id} disconnected")
+                if ts ! = last_ts:
+                    #telemetry_payload handles dates
+                    payload = _telemetry_payload(row)
+                    #datetime objects to strings
+                    if isinstance(payload.get("captured_at"), datetime):
+                        payload["captured_at"] = payload["captured_at"].isoformat()
+            
+                    await websocket.send_json(
+                        {
+                            "type": "telemetry.latest",
+                            "rover_id": rover_id,
+                            "telemetry": payload),
+                        }
+                    )
+                    last_ts = ts
 
+                await asyncio.sleep(1)
+        except WebSocketDisconnect:
+            print(f"Rover {rover_id} disconnected")
+        except Exception as e:
+            print(f"WebSocket Error: {e}")
 
 @router.websocket("/websocket/scans/{session_id}")
 async def scans_ws(websocket: WebSocket, session_id: int):
