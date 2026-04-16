@@ -112,6 +112,15 @@ async def upload_scan(
     db.add(scan)
     db.commit()
     db.refresh(scan)
+    except Exception as e:
+        db.rollback()
+        # If DB fails, we MUST delete from OCI or we pay for "ghost" files
+        if image_key:
+            try:
+                delete_from_oci(image_key)
+            except Exception:
+                pass 
+        raise HTTPException(status_code=500, detail=f"database failed: {str(e)}")
     
     return {
         "status": "stored",
@@ -142,7 +151,7 @@ async def upload_scan_base64(
             raise HTTPException(status_code=404, detail="Session not found")
         if session.farmer_id != current_user.farmer_id:
             raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
-        except (binascii.Error, ValueError):
+    except (binascii.Error, ValueError):
             raise HTTPException(status_code=400, detail="Invalid base64 image payload")
     
     try:
