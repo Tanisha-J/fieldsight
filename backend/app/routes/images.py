@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.db import get_db
-from app.models import Scan
+from app.models import Scan, RoverSession, Farmer
 from app.services.image_analysis_service import analyze_image
 from app.services.image_analysis_service import ImageAnalysisError
 from app.services.oci_service import upload_to_oci
@@ -71,22 +71,22 @@ async def upload_scan(
     current_user: Farmer = Depends(get_current_user),
 ):
     image_bytes = await image.read()
+    # making sure this is a valid session
+    session = db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.farmer_id != current_user.farmer_id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
     #1. send to gemini
     try:
         result = await analyze_image(image_bytes)
-    except Exception as e:
-        print(f"[IMAGE ANALYSIS ERROR] {e}")
-        raise HTTPException(
-                status_code=503,
-                 detail="Image analysis temporarily unavailable (model overloaded). Please retry."
-                  
-              )
-    
     except ImageAnalysisError as e:
+        raise HTTPException(status_code=502, detail=f"Image analysis failed: {e}")
+    except ServerError:
         raise HTTPException(
-            status_code=502,
-            detail=f"Image analysis failed: {e}",
-        )
+            status_code=503,
+            detail="Image analysis temporarily unavailable (model overloaded). Please retry."
+    )
 
 
     #2. if healthy
@@ -98,7 +98,7 @@ async def upload_scan(
     #4. save to db
     scan = Scan(
         session_id=session_id,
-        farmer_id=farmer_id,
+        farmer_id=current_user.farmer_id,
         disease_status=result["disease_status"],
         severity=result["severity"],
         image_url=image_url,
@@ -127,17 +127,23 @@ async def upload_scan(
 @router.post("/scans/upload-base64")
 async def upload_scan_base64(
     session_id: int = Form(...),
-    farmer_id: int = Form(...),
     gps_lat: float = Form(...),
     gps_lng: float = Form(...),
     image_base64: str = Form(...),
     filename: str = Form("scan.jpg"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Farmer = Depends(get_current_user)
 ):
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
-    except (binascii.Error, ValueError):
-        raise HTTPException(status_code=400, detail="Invalid base64 image payload")
+        # making sure this is a valid session
+        session = db.query(RoverSession).filter(RoverSession.session_id == session_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if session.farmer_id != current_user.farmer_id:
+            raise HTTPException(status_code=403, detail="Not authorized to upload to this session")
+        except (binascii.Error, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid base64 image payload")
     
     try:
         result = await analyze_image(image_bytes)
@@ -162,7 +168,7 @@ async def upload_scan_base64(
 
         scan = Scan(
             session_id=session_id,
-            farmer_id=farmer_id,
+            farmer_id=current_user.farmer_id,
             disease_status=result["disease_status"],
             severity=result["severity"],
             short_explanation=result.get("short_explanation"),
@@ -183,7 +189,7 @@ async def upload_scan_base64(
                 delete_from_oci(image_key)
             except Exception:
                 pass
-        raise
+        raise HTTPException(status_code=500, detail=f"Database/OCI failure: {str(e)}")
 
     return {
         "status": "stored",

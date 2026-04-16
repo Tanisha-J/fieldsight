@@ -14,7 +14,8 @@ from app.services.mqtt_service import start_mqtt_client
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if os.getenv("MQTT_ENABLED", "true").lower() == "true":
-        start_mqtt_client()
+        #start_mqtt_client()
+        pass
     yield
 
 app= FastAPI(title = "FieldSight API", lifespan= lifespan)

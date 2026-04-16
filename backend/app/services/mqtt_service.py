@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime, timezone 
 import ssl 
+from typing import Optional
 
 
 import paho.mqtt.client as mqtt # lets code connect to broker, and establish subscribers and publishers
@@ -41,10 +42,9 @@ MQTT_TLS_INSECURE = os.getenv("MQTT_TLS_INSECURE", "false").lower() == "true"
 
 
 # the actual MQTT client variable, created when start_mqtt_client() is run
-_client: mqtt.Client | None = None
+_client: Optional[mqtt.Client] = None
 
-
-def _parse_timestamp(value: str | None) -> datetime:
+def _parse_timestamp(value: Optional[str]) -> datetime:
     if not value:
         return datetime.now(timezone.utc) 
     try:
@@ -94,16 +94,17 @@ def _configure_auth_and_tls(client: mqtt.Client) -> None:
     if MQTT_USERNAME:
         client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-    if MQTT_USE_TLS:
-        if not MQTT_CA_CERT:
-            raise RuntimeError("MQTT_USE_TLS=true but MQTT_CA_CERT is missing")
-        client.tls_set(
-            ca_certs=MQTT_CA_CERT,
-            certfile=MQTT_CLIENT_CERT or None,
-            keyfile=MQTT_CLIENT_KEY or None,
-            tls_version=ssl.PROTOCOL_TLS_CLIENT,
-        )
-        client.tls_insecure_set(False)
+    #if MQTT_USE_TLS:
+    #    if not MQTT_CA_CERT:
+    #        raise RuntimeError("MQTT_USE_TLS=true but MQTT_CA_CERT is missing")
+    #    client.tls_set(
+     #       ca_certs=MQTT_CA_CERT,
+      #      certfile=MQTT_CLIENT_CERT or None,
+       #     keyfile=MQTT_CLIENT_KEY or None,
+        #    tls_version=ssl.PROTOCOL_TLS_CLIENT,
+        #)
+        #client.tls_insecure_set(False)
+        pass
 
 def start_mqtt_client() -> mqtt.Client:
     global _client
@@ -122,7 +123,12 @@ def start_mqtt_client() -> mqtt.Client:
     _client = client
     return client
 
-def publish_command(command: str, rover_id: int, session_id: int = None, value: str | None = None) -> dict:
+def publish_command(
+    command: str, 
+    rover_id: int, 
+    session_id: Optional[int] = None, 
+    value: Optional[str] = None
+) -> dict: 
     client = start_mqtt_client()
 
     payload = {

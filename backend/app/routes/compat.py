@@ -25,7 +25,7 @@ class SignupRequest(BaseModel):
     farm_name: str = Field(min_length=1, max_length=50, alias="farmName")
 
     class Config:
-        allow_population_by_field_name = True
+        allow_population_by_field_name = True #keep up with the newer version of the Pydantic library
 
 class LoginRequest (BaseModel):
     username:str

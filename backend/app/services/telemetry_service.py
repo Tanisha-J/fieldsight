@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from typing import Optional
 
 # insert telemetry data into table and saves it
 def store_telemetry(
@@ -11,8 +12,8 @@ def store_telemetry(
     battery: float,
     gps_lat: float,
     gps_lng: float,
-    heading: float | None,
-    captured_at: datetime | None = None,
+    heading: Optional[float] = None,
+    captured_at: Optional[datetime] = None,
 ) -> None:
     
     ts = captured_at or datetime.now(timezone.utc) # either uses determined time stamp or UTC time

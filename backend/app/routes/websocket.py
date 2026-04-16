@@ -22,7 +22,18 @@ def _scan_payload(scan: Scan) -> dict:
         "gps_lng": scan.gps_lng,
         "short_explanation": scan.short_explanation,
         "confidence_score": scan.confidence_score,
-        "scanned_at": scan.scanned_at,
+        "scanned_at": scan.scanned_at.isoformat() if scan.scanned_at else None,
+    }
+    
+def _telemetry_payload(row: dict) -> dict:
+    return {
+        "rover_id": row.get("rover_id"),
+        "session_id": row.get("session_id"),
+        "battery": row.get("battery"),
+        "gps_lat": row.get("gps_lat"),
+        "gps_lng": row.get("gps_lng"),
+        "heading": row.get("heading"),
+        "captured_at": row.get("captured_at").isoformat() if row.get("captured_at") else None,
     }
 
 
@@ -44,7 +55,7 @@ async def telemetry_endpoint(websocket: WebSocket, rover_id: int):
                     {
                         "type": "telemetry.latest",
                         "rover_id": rover_id,
-                        "telemetry": row,
+                        "telemetry": _telemetry_payload(row),
                     }
                 )
                 last_ts = ts

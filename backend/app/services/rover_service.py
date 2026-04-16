@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from sqlalchemy.orm import Session
 from app.models import RoverSession
 from app.services.mqtt_service import publish_command
